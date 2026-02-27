@@ -191,13 +191,7 @@ module azureOpenAi './modules/azure-openai.bicep' = if (deployAzureOpenAi && emp
   }
 }
 
-resource generatedAzureOpenAiAccount 'Microsoft.CognitiveServices/accounts@2025-06-01' existing = if (deployAzureOpenAi && empty(azureOpenAiEndpoint)) {
-  scope: rg
-  name: generatedAzureOpenAiName
-}
-
 var effectiveAzureOpenAiEndpoint = !empty(azureOpenAiEndpoint) ? azureOpenAiEndpoint : (deployAzureOpenAi && empty(azureOpenAiEndpoint) ? azureOpenAi!.outputs.endpoint : '')
-var effectiveAzureOpenAiApiKey = !empty(azureOpenAiApiKey) ? azureOpenAiApiKey : (deployAzureOpenAi && empty(azureOpenAiEndpoint) ? generatedAzureOpenAiAccount!.listKeys().key1 : '')
 
 module logAnalytics './modules/log-analytics.bicep' = {
   name: 'log-analytics'
@@ -267,7 +261,7 @@ module openclawApp './modules/openclaw-app.bicep' = {
     imageTag: imageTag
     useOfficialImage: useOfficialImage
     azureOpenAiEndpoint: effectiveAzureOpenAiEndpoint
-    azureOpenAiApiKey: effectiveAzureOpenAiApiKey
+    azureOpenAiApiKey: !empty(azureOpenAiApiKey) ? azureOpenAiApiKey : (deployAzureOpenAi && empty(azureOpenAiEndpoint) ? azureOpenAi!.outputs.apiKey : '')
     azureOpenAiDeployment: azureOpenAiDeployment
     azureOpenAiReasoning: azureOpenAiReasoning
     anthropicApiKey: anthropicApiKey

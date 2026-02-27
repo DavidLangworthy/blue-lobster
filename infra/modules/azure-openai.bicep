@@ -62,3 +62,4 @@ resource modelDeployment 'Microsoft.CognitiveServices/accounts/deployments@2025-
 
 output name string = account.name
 output endpoint string = account.properties.endpoint
+output apiKey string = account.listKeys().key1
