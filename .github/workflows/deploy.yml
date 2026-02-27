@@ -154,6 +154,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          export SKIP_IMAGE_BUILD=true
 
           has_latest_image=false
           acr_name="$(azd env get-values | awk -F= '/^CONTAINER_REGISTRY_NAME=/{gsub(/"/,"",$2);print $2}')"

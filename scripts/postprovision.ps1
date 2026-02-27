@@ -7,6 +7,11 @@ param(
 
 $ErrorActionPreference = "Stop"
 
+if ($env:SKIP_IMAGE_BUILD -and $env:SKIP_IMAGE_BUILD.ToLowerInvariant() -eq "true") {
+    Write-Host "Post-provision: SKIP_IMAGE_BUILD=true; skipping application image build" -ForegroundColor Yellow
+    exit 0
+}
+
 Write-Host "Post-provision: building application image" -ForegroundColor Cyan
 
 if (-not $ContainerRegistryName) {
