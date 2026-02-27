@@ -43,6 +43,7 @@ Deploy your personal AI assistant to Azure Container Apps with Discord integrati
 - ✅ [Azure CLI](https://docs.microsoft.com/cli/azure/install-azure-cli) installed
 - ✅ [OpenRouter API key](https://openrouter.ai/keys) for LLM access
 - ✅ Discord account for bot creation
+- ✅ For Outlook + WhatsApp credential setup details, see [docs/outlook-whatsapp-credentials.md](docs/outlook-whatsapp-credentials.md)
 
 ## One-Click Deployment with azd
 
