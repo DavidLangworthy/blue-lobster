@@ -29,6 +29,7 @@ env:
   AZURE_OPENAI_REASONING: ${{ vars.AZURE_OPENAI_REASONING || 'false' }}
   OPENCLAW_PERSONA_NAME: ${{ vars.OPENCLAW_PERSONA_NAME || 'Clawd' }}
   OPENCLAW_VERSION: ${{ vars.OPENCLAW_VERSION || 'main' }}
+  IMAGE_TAG: ${{ vars.IMAGE_TAG || github.sha }}
   OPENCLAW_ROOMS: ${{ vars.OPENCLAW_ROOMS || 'living-room,master-bedroom' }}
   OPENCLAW_MODEL_FALLBACKS: ${{ vars.OPENCLAW_MODEL_FALLBACKS }}
   EXISTING_CONTAINER_REGISTRY_NAME: ${{ vars.EXISTING_CONTAINER_REGISTRY_NAME }}
@@ -133,6 +134,7 @@ jobs:
           azd env set AZURE_OPENAI_DEPLOYMENT_SKU_CAPACITY "${AZURE_OPENAI_DEPLOYMENT_SKU_CAPACITY}"
           azd env set AZURE_OPENAI_REASONING "${AZURE_OPENAI_REASONING}"
           azd env set OPENCLAW_PERSONA_NAME "${OPENCLAW_PERSONA_NAME}"
+          azd env set IMAGE_TAG "${IMAGE_TAG}"
           azd env set OPENCLAW_ROOMS "${OPENCLAW_ROOMS}"
           azd env set OPENCLAW_MODEL_FALLBACKS "${OPENCLAW_MODEL_FALLBACKS}"
           azd env set OPENCLAW_TTS_PROVIDER "${OPENCLAW_TTS_PROVIDER}"
@@ -170,38 +172,65 @@ jobs:
           set_if_present ALLOWED_IP_RANGES "${ALLOWED_IP_RANGES}"
           set_if_present ALERT_EMAIL_ADDRESS "${ALERT_EMAIL_ADDRESS}"
 
-      - name: Provision + Deploy (bootstrap-safe)
+      - name: Provision + Deploy
         shell: bash
         run: |
           set -euo pipefail
           export SKIP_IMAGE_BUILD=true
 
-          has_latest_image=false
-          acr_name="$(azd env get-value CONTAINER_REGISTRY_NAME --environment "${AZD_ENV_NAME}" 2>/dev/null || true)"
+          image_tag="${IMAGE_TAG}"
+          has_image_tag=false
+          acr_name="${EXISTING_CONTAINER_REGISTRY_NAME:-}"
+          app_exists=false
+          rg_name="$(azd env get-value AZURE_RESOURCE_GROUP --environment "${AZD_ENV_NAME}" 2>/dev/null || true)"
+          if [ -z "${rg_name}" ]; then
+            rg_name="rg-${AZD_ENV_NAME}"
+          fi
+
+          azd env set IMAGE_TAG "${image_tag}" --environment "${AZD_ENV_NAME}"
+          azd env set USE_OFFICIAL_IMAGE "false" --environment "${AZD_ENV_NAME}"
+
+          if [ -z "${acr_name}" ]; then
+            acr_name="$(azd env get-value CONTAINER_REGISTRY_NAME --environment "${AZD_ENV_NAME}" 2>/dev/null || true)"
+          fi
+
+          if [ -z "${acr_name}" ]; then
+            acr_name="$(az acr list -g "${rg_name}" --query "[0].name" -o tsv 2>/dev/null || true)"
+          fi
+
+          if az containerapp show -g "${rg_name}" -n openclaw >/dev/null 2>&1; then
+            app_exists=true
+          fi
 
           if [ -n "${acr_name}" ]; then
-            latest_count="$(az acr repository show-tags --name "${acr_name}" --repository clawdbot --query "[?@=='latest'] | length(@)" -o tsv 2>/dev/null || echo "0")"
-            if [ "${latest_count}" = "1" ]; then
-              has_latest_image=true
+            tag_count="$(az acr repository show-tags --name "${acr_name}" --repository clawdbot --query "[?@=='${image_tag}'] | length(@)" -o tsv 2>/dev/null || echo "0")"
+            if [ "${tag_count}" = "1" ]; then
+              has_image_tag=true
             fi
           fi
 
-          if [ "${has_latest_image}" = "true" ]; then
-            echo "Custom image already exists in ACR; running azd provision (no rebuild)"
-            azd provision --environment "${AZD_ENV_NAME}" --no-prompt
-          else
-            echo "Bootstrap path: provisioning with official image first"
+          if [ -z "${acr_name}" ] && [ "${app_exists}" = "false" ]; then
+            echo "First-time bootstrap: no ACR/app found, provisioning once with official image"
             azd env set USE_OFFICIAL_IMAGE "true" --environment "${AZD_ENV_NAME}"
             azd provision --environment "${AZD_ENV_NAME}" --no-prompt
-
-            echo "Building custom image into ACR after bootstrap provision"
-            acr_name="$(azd env get-value CONTAINER_REGISTRY_NAME --environment "${AZD_ENV_NAME}" 2>/dev/null || true)"
-            ./scripts/build-image.sh "${acr_name}" "latest" "${OPENCLAW_VERSION}"
-
-            echo "Switching to custom ACR image"
             azd env set USE_OFFICIAL_IMAGE "false" --environment "${AZD_ENV_NAME}"
-            azd provision --environment "${AZD_ENV_NAME}" --no-prompt
+            acr_name="$(azd env get-value CONTAINER_REGISTRY_NAME --environment "${AZD_ENV_NAME}" 2>/dev/null || true)"
+            has_image_tag=false
           fi
+
+          if [ -z "${acr_name}" ]; then
+            echo "ERROR: could not resolve ACR name for custom image deployment." >&2
+            exit 1
+          fi
+
+          if [ "${has_image_tag}" != "true" ]; then
+            echo "Building custom image clawdbot:${image_tag} in ACR ${acr_name}"
+            ./scripts/build-image.sh "${acr_name}" "${image_tag}" "${OPENCLAW_VERSION}"
+          fi
+
+          echo "Deploying custom ACR image tag ${image_tag}"
+          azd env set USE_OFFICIAL_IMAGE "false" --environment "${AZD_ENV_NAME}"
+          azd provision --environment "${AZD_ENV_NAME}" --no-prompt
 
       - name: AOAI liveness probe
         shell: bash

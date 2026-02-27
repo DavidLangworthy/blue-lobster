@@ -113,6 +113,9 @@
     "elevenLabsApiKey": {
       "value": "${ELEVENLABS_API_KEY}"
     },
+    "imageTag": {
+      "value": "${IMAGE_TAG=latest}"
+    },
     "useOfficialImage": {
       "value": "${USE_OFFICIAL_IMAGE=false}"
     },

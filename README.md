@@ -61,6 +61,7 @@ git push origin main
 ```
 
 GitHub Actions provisions infra, builds the container image in ACR, and deploys to ACA.
+Deploys pin ACA to an immutable image tag (`IMAGE_TAG`, default: commit SHA) instead of relying on `:latest`.
 
 ### 6. Pair WhatsApp and test
 
