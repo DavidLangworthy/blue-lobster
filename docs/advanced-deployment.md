@@ -1,109 +1,119 @@
 # Advanced Deployment Guide
 
-This document contains deeper operational and architecture details.
+This guide covers design decisions, non-default options, and operational details.
 
-If you are new to this repo, start with [README.md](../README.md).
+## Architecture Summary
 
-## Architecture
-
-Core resources:
+Resources deployed by `azd`:
 
 - Azure Container Apps Environment
 - Azure Container Registry
-- Azure Storage Account + Azure File Share mounts
-- Azure Log Analytics
-- Azure OpenAI (Global Standard deployment)
+- Azure Storage Account with Azure File shares
+- Azure Log Analytics Workspace
+- Optional Azure Monitor scheduled-query alerts
 
-Runtime behavior:
+Runtime layout:
 
 - OpenClaw gateway runs in ACA
-- scale-to-zero enabled (`minReplicas=0`)
-- periodic wake/check handled by scheduler configuration
-- persistent state mounted from Azure File Share
+- `minReplicas=0` for scale-to-zero
+- Cron scale rule wakes the container every 2 hours
+- Persistent mounts:
+  - `/home/node/.openclaw` (sessions/tokens/config)
+  - `/workspace` (prompt, ledgers, room state)
+  - `/workspace/media` (voice media)
 
-## Model Strategy
+## Model Strategy (Model-as-a-Service)
 
-Default:
+Primary model path:
 
-- `openai/gpt-5.2` via Azure OpenAI Global Standard
+- Azure OpenAI endpoint + key (pay-per-token)
+- Deployment defaults to `gpt-5-2`
+- OpenClaw provider is configured as an OpenAI-compatible endpoint with `openai-responses` API mode
 
-Why this mode:
+This avoids dedicated PTU requirements and keeps cost usage-based.
 
-- pay-per-token billing
-- no dedicated PTU requirement
-- stable Azure OpenAI deployment pattern
+## Voice Notes
 
-## Channels and Integrations
+Inbound voice note transcription order:
 
-Primary channel:
+1. Azure Speech CLI adapter (`/app/azure-stt.sh`) when `AZURE_SPEECH_KEY` + `AZURE_SPEECH_REGION` are set
+2. OpenAI fallback transcription model (`gpt-4o-mini-transcribe`)
 
-- WhatsApp Web (native OpenClaw channel)
+Outbound TTS:
 
-Mail integration:
+- Default provider: `edge`
+- Premium option: set `ELEVENLABS_API_KEY` and `OPENCLAW_TTS_PROVIDER=elevenlabs`
 
-- Outlook mailbox over IMAP/SMTP
+## WhatsApp Integration Notes
 
-Voice notes:
+This repo is configured for OpenClaw native WhatsApp Web channel login (QR pairing).
 
-- inbound transcription: OpenClaw media audio pipeline
-- outbound audio: OpenClaw TTS pipeline
+- No long-lived WhatsApp API token is required in this mode
+- Session survives restarts because credentials are on Azure Files
+- If you later move to Meta WhatsApp Cloud API, use a separate integration path
 
-## Approval Gates
+## Approval and Safety Posture
 
-Web browsing can run autonomously.
+Configured defaults:
 
-Email sends and purchase-like actions are approval-gated and resolved via:
+- WhatsApp channel enabled
+- Browser tool enabled with Chromium (`/usr/bin/chromium`)
+- Discord/Telegram channels blocked in config
+- Exec approvals enabled for WhatsApp sessions (`/approve ...` workflow)
 
-- `/approve <id> allow-once`
-- `/approve <id> deny`
+Recommended governance:
 
-## Persistence
+- Keep purchasing/payment actions behind explicit approvals
+- Keep irreversible side effects logged in `SOURCING_LEDGER.csv`
 
-Persisted paths should include:
+## Memory Initialization
 
-- OpenClaw credentials directory
-- workspace markdown/csv files
-- canvas artifacts
+On first boot, `src/moltbot/init-workspace.sh` creates:
 
-This ensures continuity across scale-down and restarts.
+- `SYSTEM_PROMPT.md`
+- `SOURCING_LEDGER.csv`
+- `HEARTBEAT.md`
+- Room canvas scaffolds under `/workspace/canvas/<room>/index.html`
 
-## GitHub Actions and OIDC
+## Network Exposure and Access
+
+- ACA ingress is public by default
+- Control UI auth is token-based (`OPENCLAW_GATEWAY_TOKEN`)
+- Optional CIDR restrictions through `ALLOWED_IP_RANGES`
+- Optional internal ingress via `INTERNAL_ONLY=true` (requires matching networking setup)
+
+## GitOps and OIDC
 
 Deployment workflow:
 
-- trigger on push to `main`
-- login with `azure/login` using OIDC
-- run `azd up`/`azd deploy`
+- `.github/workflows/deploy.yml`
+- Trigger: push to `main`
+- Auth: GitHub OIDC via `azure/login`
+- Deploy command: `azd up --no-prompt`
 
-No static Azure client secret should be stored in GitHub.
+OIDC setup instructions:
 
-## Forkability Guidelines
-
-To keep this template reusable:
-
-- parameterize all account-specific values
-- avoid hardcoded subscription/resource IDs
-- never commit secrets
-- keep docs explicit about required environment variables
+- [docs/github-oidc-setup.md](github-oidc-setup.md)
 
 ## Troubleshooting
 
-### WhatsApp not connected
+### Gateway never becomes healthy
 
-- Re-run channel login QR flow.
-- Verify credential mount is persistent.
+- Check logs:
+  - `az containerapp logs show --name <app-name> --resource-group <rg> --follow`
+- Verify `OPENCLAW_GATEWAY_TOKEN`, AOAI endpoint/key, and model deployment name.
 
-### No replies after scale-up
+### WhatsApp disconnected after restart
 
-- Check ACA logs.
-- Verify model credentials and gateway token.
+- Verify Azure Files mounts are attached
+- Verify `/home/node/.openclaw` is persistent
 
-### Outlook auth failures
+### Voice notes not transcribed
 
-- Confirm app password is in use.
-- Confirm IMAP/SMTP host+port values.
+- Verify `AZURE_SPEECH_KEY` and `AZURE_SPEECH_REGION`
+- Confirm audio files are present in `/workspace/media`
 
-### Deployment failures for AOAI model
+### Outlook IMAP/SMTP failures
 
-- Region/model availability can vary.
-- Retry with supported region/model override.
+- Confirm app password (not account password)
+- Confirm host/port values match Outlook defaults

@@ -1,15 +1,13 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/Azure/azure-dev/main/schemas/v1.0/azure.yaml.json
-name: moltbot-azure-container-apps
+name: openclaw-azure-container-apps
 metadata:
   template: azd-init
 
-# Infrastructure configuration
 infra:
   provider: bicep
   path: infra
   module: main
 
-# Hooks for post-deployment configuration
 hooks:
   postprovision:
     windows:
@@ -27,6 +25,5 @@ hooks:
       shell: sh
       run: ./scripts/postdeploy.sh
 
-# Pipeline configuration for GitHub Actions
 pipeline:
   provider: github

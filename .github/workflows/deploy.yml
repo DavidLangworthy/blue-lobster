@@ -1,0 +1,131 @@
+name: Deploy OpenClaw to Azure
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: deploy-openclaw-main
+  cancel-in-progress: false
+
+env:
+  AZD_ENV_NAME: ${{ vars.AZD_ENV_NAME || 'openclaw-prod' }}
+  AZURE_LOCATION: ${{ vars.AZURE_LOCATION || 'eastus2' }}
+  AZURE_OPENAI_DEPLOYMENT: ${{ vars.AZURE_OPENAI_DEPLOYMENT || 'gpt-5-2' }}
+  OPENCLAW_PERSONA_NAME: ${{ vars.OPENCLAW_PERSONA_NAME || 'Clawd' }}
+  OPENCLAW_ROOMS: ${{ vars.OPENCLAW_ROOMS || 'living-room,master-bedroom' }}
+  OPENCLAW_MODEL_FALLBACKS: ${{ vars.OPENCLAW_MODEL_FALLBACKS || 'anthropic/claude-sonnet-4-6' }}
+  OPENCLAW_TTS_PROVIDER: ${{ vars.OPENCLAW_TTS_PROVIDER || 'edge' }}
+  OPENCLAW_TTS_AUTO: ${{ vars.OPENCLAW_TTS_AUTO || 'inbound' }}
+  AZURE_SPEECH_LANGUAGE: ${{ vars.AZURE_SPEECH_LANGUAGE || 'en-US' }}
+  IMAP_HOST: ${{ vars.IMAP_HOST || 'outlook.office365.com' }}
+  IMAP_PORT: ${{ vars.IMAP_PORT || '993' }}
+  SMTP_HOST: ${{ vars.SMTP_HOST || 'smtp.office365.com' }}
+  SMTP_PORT: ${{ vars.SMTP_PORT || '587' }}
+  ENABLE_ALERTS: ${{ vars.ENABLE_ALERTS || 'true' }}
+  INTERNAL_ONLY: ${{ vars.INTERNAL_ONLY || 'false' }}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Azure Login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Install Azure Developer CLI
+        uses: azure/setup-azd@v2
+
+      - name: Initialize azd environment
+        shell: bash
+        env:
+          AZURE_OPENAI_ENDPOINT: ${{ secrets.AZURE_OPENAI_ENDPOINT }}
+          AZURE_OPENAI_API_KEY: ${{ secrets.AZURE_OPENAI_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          OPENCLAW_GATEWAY_TOKEN: ${{ secrets.OPENCLAW_GATEWAY_TOKEN }}
+          WHATSAPP_ALLOW_FROM: ${{ secrets.WHATSAPP_ALLOW_FROM }}
+          WHATSAPP_DM_POLICY: ${{ vars.WHATSAPP_DM_POLICY }}
+          WHATSAPP_GROUP_POLICY: ${{ vars.WHATSAPP_GROUP_POLICY }}
+          OUTLOOK_EMAIL: ${{ secrets.OUTLOOK_EMAIL }}
+          OUTLOOK_APP_PASSWORD: ${{ secrets.OUTLOOK_APP_PASSWORD }}
+          AZURE_SPEECH_KEY: ${{ secrets.AZURE_SPEECH_KEY }}
+          AZURE_SPEECH_REGION: ${{ secrets.AZURE_SPEECH_REGION }}
+          ELEVENLABS_API_KEY: ${{ secrets.ELEVENLABS_API_KEY }}
+          OPENCLAW_MODEL: ${{ vars.OPENCLAW_MODEL }}
+          ALLOWED_IP_RANGES: ${{ vars.ALLOWED_IP_RANGES }}
+          ALERT_EMAIL_ADDRESS: ${{ vars.ALERT_EMAIL_ADDRESS }}
+        run: |
+          set -euo pipefail
+
+          ensure_required() {
+            local name="$1"
+            local value="$2"
+            if [ -z "${value}" ]; then
+              echo "Missing required value: ${name}" >&2
+              exit 1
+            fi
+          }
+
+          set_if_present() {
+            local name="$1"
+            local value="$2"
+            if [ -n "${value}" ]; then
+              azd env set "${name}" "${value}"
+            fi
+          }
+
+          if azd env select "${AZD_ENV_NAME}" >/dev/null 2>&1; then
+            echo "Using existing azd env '${AZD_ENV_NAME}'"
+          else
+            azd env new "${AZD_ENV_NAME}" --no-prompt
+          fi
+
+          ensure_required "OPENCLAW_GATEWAY_TOKEN" "${OPENCLAW_GATEWAY_TOKEN}"
+          ensure_required "AZURE_OPENAI_ENDPOINT" "${AZURE_OPENAI_ENDPOINT}"
+          ensure_required "AZURE_OPENAI_API_KEY" "${AZURE_OPENAI_API_KEY}"
+
+          azd env set AZURE_LOCATION "${AZURE_LOCATION}"
+          azd env set AZURE_OPENAI_DEPLOYMENT "${AZURE_OPENAI_DEPLOYMENT}"
+          azd env set OPENCLAW_PERSONA_NAME "${OPENCLAW_PERSONA_NAME}"
+          azd env set OPENCLAW_ROOMS "${OPENCLAW_ROOMS}"
+          azd env set OPENCLAW_MODEL_FALLBACKS "${OPENCLAW_MODEL_FALLBACKS}"
+          azd env set OPENCLAW_TTS_PROVIDER "${OPENCLAW_TTS_PROVIDER}"
+          azd env set OPENCLAW_TTS_AUTO "${OPENCLAW_TTS_AUTO}"
+          azd env set AZURE_SPEECH_LANGUAGE "${AZURE_SPEECH_LANGUAGE}"
+          azd env set IMAP_HOST "${IMAP_HOST}"
+          azd env set IMAP_PORT "${IMAP_PORT}"
+          azd env set SMTP_HOST "${SMTP_HOST}"
+          azd env set SMTP_PORT "${SMTP_PORT}"
+          azd env set ENABLE_ALERTS "${ENABLE_ALERTS}"
+          azd env set INTERNAL_ONLY "${INTERNAL_ONLY}"
+
+          set_if_present AZURE_OPENAI_ENDPOINT "${AZURE_OPENAI_ENDPOINT}"
+          set_if_present AZURE_OPENAI_API_KEY "${AZURE_OPENAI_API_KEY}"
+          set_if_present ANTHROPIC_API_KEY "${ANTHROPIC_API_KEY}"
+          set_if_present OPENCLAW_GATEWAY_TOKEN "${OPENCLAW_GATEWAY_TOKEN}"
+          set_if_present WHATSAPP_ALLOW_FROM "${WHATSAPP_ALLOW_FROM}"
+          set_if_present WHATSAPP_DM_POLICY "${WHATSAPP_DM_POLICY}"
+          set_if_present WHATSAPP_GROUP_POLICY "${WHATSAPP_GROUP_POLICY}"
+          set_if_present OUTLOOK_EMAIL "${OUTLOOK_EMAIL}"
+          set_if_present OUTLOOK_APP_PASSWORD "${OUTLOOK_APP_PASSWORD}"
+          set_if_present AZURE_SPEECH_KEY "${AZURE_SPEECH_KEY}"
+          set_if_present AZURE_SPEECH_REGION "${AZURE_SPEECH_REGION}"
+          set_if_present ELEVENLABS_API_KEY "${ELEVENLABS_API_KEY}"
+          set_if_present OPENCLAW_MODEL "${OPENCLAW_MODEL}"
+          set_if_present ALLOWED_IP_RANGES "${ALLOWED_IP_RANGES}"
+          set_if_present ALERT_EMAIL_ADDRESS "${ALERT_EMAIL_ADDRESS}"
+
+      - name: Provision + Deploy
+        run: azd up --no-prompt

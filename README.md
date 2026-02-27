@@ -1,103 +1,97 @@
 # OpenClaw on Azure Container Apps (GitOps)
 
-Deploy an autonomous OpenClaw agent to Azure Container Apps with:
+Deploy an OpenClaw agent on Azure Container Apps with scale-to-zero, persistent Azure Files storage, WhatsApp, Outlook IMAP/SMTP, and GitHub Actions GitOps.
 
-- pay-per-token Azure OpenAI (`gpt-5.2`, Global Standard)
-- scale-to-zero compute
-- persistent Azure File Share memory/workspace
-- WhatsApp channel (native OpenClaw WhatsApp Web)
-- Outlook mailbox integration (IMAP/SMTP)
-- GitHub Actions deployment via `azd` + OIDC
+## Happy Path
 
-This repo is optimized for a simple happy path. Advanced options are documented separately.
-
-## Happy Path (10-15 minutes)
-
-## 1. Prerequisites
+### 1. Prerequisites
 
 - Azure subscription with Contributor access
-- [Azure CLI](https://learn.microsoft.com/cli/azure/install-azure-cli)
-- [Azure Developer CLI (`azd`)](https://learn.microsoft.com/azure/developer/azure-developer-cli/install-azd)
-- GitHub repo admin access (for Actions secrets)
+- Azure CLI
+- Azure Developer CLI (`azd`)
+- GitHub repo admin access
 
-## 2. Clone and login
+### 2. Clone and sign in
 
 ```bash
 git clone https://github.com/DavidLangworthy/blue-lobster.git
 cd blue-lobster
 
-azd auth login
 az login
+azd auth login
 ```
 
-## 3. Create an `azd` environment
+### 3. Create an `azd` environment
 
 ```bash
 azd env new
 ```
 
-Pick an environment name like `openclaw-prod`.
+Pick a name like `openclaw-prod`.
 
-## 4. Set required secrets and settings
-
-At minimum, set:
+### 4. Set required values
 
 ```bash
 azd env set AZURE_LOCATION "eastus2"
-azd env set AZURE_OPENAI_MODEL "gpt-5.2"
 azd env set OPENCLAW_GATEWAY_TOKEN "<long-random-token>"
-azd env set WHATSAPP_ALLOW_FROM "+15551234567"
+azd env set AZURE_OPENAI_ENDPOINT "https://<your-aoai>.openai.azure.com"
+azd env set AZURE_OPENAI_API_KEY "<aoai-key>"
+azd env set AZURE_OPENAI_DEPLOYMENT "gpt-5-2"
 ```
 
-For Outlook and WhatsApp credential setup, use:
+### 5. Set channel + mailbox values
+
+```bash
+azd env set WHATSAPP_ALLOW_FROM "+15551234567"
+azd env set OUTLOOK_EMAIL "you@outlook.com"
+azd env set OUTLOOK_APP_PASSWORD "<outlook-app-password>"
+```
+
+Credential walkthroughs:
 
 - [docs/outlook-whatsapp-credentials.md](docs/outlook-whatsapp-credentials.md)
 
-## 5. Provision and deploy
+### 6. Deploy
 
 ```bash
 azd up
 ```
 
-This provisions infrastructure and deploys the container app.
+This provisions infra, builds the container image in ACR, and deploys to ACA.
 
-## 6. Pair WhatsApp
+### 7. Pair WhatsApp and test
 
-Once deployed, pair WhatsApp using the QR flow in OpenClaw channels login.
+- Open `https://<app-fqdn>/` and authenticate using `OPENCLAW_GATEWAY_TOKEN`
+- Start WhatsApp channel login (QR flow)
+- Send a test message and a voice note
 
-Credentials persist on Azure File Share and survive restarts/scale-to-zero.
+## What this deploy includes
 
-## 7. Validate
+- Azure Container Apps with `minReplicas=0` (scale-to-zero)
+- Cron wake window every 2 hours for heartbeat tasks
+- Persistent Azure File shares mounted at:
+  - `/home/node/.openclaw`
+  - `/workspace`
+  - `/workspace/media`
+- Azure OpenAI model-as-a-service wiring (`openai-responses` API style)
+- Optional Azure Speech STT (`src/moltbot/azure-stt.sh`)
+- Optional ElevenLabs TTS via `ELEVENLABS_API_KEY`
+- Live Canvas over ingress with room paths like:
+  - `/__openclaw__/canvas/living-room/`
+  - `/__openclaw__/canvas/master-bedroom/`
 
-- Health endpoint: `https://<app-fqdn>/health`
-- Control UI: `https://<app-fqdn>/`
-- Canvas rooms (example):
-  - `https://<app-fqdn>/__openclaw__/canvas/living-room/`
-  - `https://<app-fqdn>/__openclaw__/canvas/master-bedroom/`
+## GitOps
 
-## GitOps Deployment (main branch)
+Pushes to `main` auto-deploy via:
 
-Use the workflow in `.github/workflows/deploy.yml`.
+- [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml)
 
-- Every push to `main` triggers deploy.
-- Auth uses GitHub OIDC (no stored Azure service principal secret).
+One-time OIDC setup guide:
 
-## Operational docs
+- [docs/github-oidc-setup.md](docs/github-oidc-setup.md)
 
-- Advanced deployment and architecture: [docs/advanced-deployment.md](docs/advanced-deployment.md)
-- Outlook + WhatsApp credentials: [docs/outlook-whatsapp-credentials.md](docs/outlook-whatsapp-credentials.md)
+## Docs
 
-## Security defaults
-
-- No OpenClaw API key required
-- Gateway token auth enabled
-- No secrets committed to git
-- Side-effectful actions require approval flow (`/approve`)
-
-## Cost model
-
-This setup targets pay-per-use:
-
-- Azure OpenAI Global Standard (pay-per-token)
-- ACA `minReplicas=0` scale-to-zero
-- Persistent storage only for agent state/workspace
+- Advanced architecture and operations: [docs/advanced-deployment.md](docs/advanced-deployment.md)
+- Outlook and WhatsApp credentials: [docs/outlook-whatsapp-credentials.md](docs/outlook-whatsapp-credentials.md)
+- GitHub OIDC setup: [docs/github-oidc-setup.md](docs/github-oidc-setup.md)
