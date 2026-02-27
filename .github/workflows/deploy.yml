@@ -122,7 +122,11 @@ jobs:
           ensure_required "OPENCLAW_GATEWAY_TOKEN" "${OPENCLAW_GATEWAY_TOKEN}"
 
           has_external_aoai=false
-          if [ -n "${AZURE_OPENAI_ENDPOINT}" ] && [ -n "${AZURE_OPENAI_API_KEY}" ]; then
+          if [ "${DEPLOY_AZURE_OPENAI}" = "true" ]; then
+            if [ -n "${AZURE_OPENAI_ENDPOINT}" ] || [ -n "${AZURE_OPENAI_API_KEY}" ]; then
+              echo "WARN: DEPLOY_AZURE_OPENAI=true, ignoring AZURE_OPENAI_ENDPOINT/API_KEY overrides."
+            fi
+          elif [ -n "${AZURE_OPENAI_ENDPOINT}" ] && [ -n "${AZURE_OPENAI_API_KEY}" ]; then
             has_external_aoai=true
           elif [ -n "${AZURE_OPENAI_ENDPOINT}" ] || [ -n "${AZURE_OPENAI_API_KEY}" ]; then
             echo "WARN: ignoring partial AOAI override (set both AZURE_OPENAI_ENDPOINT and AZURE_OPENAI_API_KEY)."
@@ -203,6 +207,7 @@ jobs:
             raw="${raw#\"}"
             raw="${raw%\'}"
             raw="${raw#\'}"
+            raw="$(printf '%s' "${raw}" | tr -d '\r\n\t ')"
             if [ "${raw}" = "''" ] || [ "${raw}" = "\"\"" ] || [ "${raw}" = "null" ]; then
               raw=""
             fi
@@ -251,6 +256,8 @@ jobs:
               acr_name="${current_image%%.azurecr.io/*}"
             fi
           fi
+
+          echo "Resolved deploy inputs: rg=${rg_name:-<empty>} app_exists=${app_exists} acr=${acr_name:-<empty>} image_tag=${image_tag}"
 
           if [ -n "${acr_name}" ]; then
             tag_count="$(az acr repository show-tags --name "${acr_name}" --repository clawdbot --query "[?@=='${image_tag}'] | length(@)" -o tsv 2>/dev/null || echo "0")"
