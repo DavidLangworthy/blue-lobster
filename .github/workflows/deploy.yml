@@ -107,6 +107,8 @@ jobs:
           ensure_required "OPENCLAW_GATEWAY_TOKEN" "${OPENCLAW_GATEWAY_TOKEN}"
 
           azd env set AZURE_LOCATION "${AZURE_LOCATION}"
+          azd env set AZURE_SUBSCRIPTION_ID "${{ secrets.AZURE_SUBSCRIPTION_ID }}"
+          azd env set AZURE_TENANT_ID "${{ secrets.AZURE_TENANT_ID }}"
           azd env set AZURE_OPENAI_DEPLOYMENT "${AZURE_OPENAI_DEPLOYMENT}"
           azd env set OPENCLAW_PERSONA_NAME "${OPENCLAW_PERSONA_NAME}"
           azd env set OPENCLAW_ROOMS "${OPENCLAW_ROOMS}"
