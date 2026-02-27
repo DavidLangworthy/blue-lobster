@@ -154,11 +154,21 @@ jobs:
         run: |
           set -euo pipefail
 
-          if az group exists --name "rg-${AZD_ENV_NAME}" | grep -q true; then
-            echo "Existing environment detected; running standard azd up"
+          has_latest_image=false
+          acr_name="$(azd env get-values | awk -F= '/^CONTAINER_REGISTRY_NAME=/{gsub(/"/,"",$2);print $2}')"
+
+          if [ -n "${acr_name}" ]; then
+            latest_count="$(az acr repository show-tags --name "${acr_name}" --repository clawdbot --query "[?@=='latest'] | length(@)" -o tsv 2>/dev/null || echo "0")"
+            if [ "${latest_count}" = "1" ]; then
+              has_latest_image=true
+            fi
+          fi
+
+          if [ "${has_latest_image}" = "true" ]; then
+            echo "Custom image already exists in ACR; running standard azd up"
             azd up --no-prompt
           else
-            echo "First-time environment bootstrap: provisioning with official image first"
+            echo "Bootstrap path: provisioning with official image first"
             azd env set USE_OFFICIAL_IMAGE "true"
             azd provision --no-prompt
 
