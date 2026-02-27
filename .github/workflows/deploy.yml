@@ -24,6 +24,9 @@ env:
   OPENCLAW_TTS_PROVIDER: ${{ vars.OPENCLAW_TTS_PROVIDER || 'edge' }}
   OPENCLAW_TTS_AUTO: ${{ vars.OPENCLAW_TTS_AUTO || 'inbound' }}
   AZURE_SPEECH_LANGUAGE: ${{ vars.AZURE_SPEECH_LANGUAGE || 'en-US' }}
+  HEARTBEAT_CRON_START: ${{ vars.HEARTBEAT_CRON_START || '0 8-20 * * *' }}
+  HEARTBEAT_CRON_END: ${{ vars.HEARTBEAT_CRON_END || '5 8-20 * * *' }}
+  HEARTBEAT_CRON_TIMEZONE: ${{ vars.HEARTBEAT_CRON_TIMEZONE || 'America/Los_Angeles' }}
   IMAP_HOST: ${{ vars.IMAP_HOST || 'outlook.office365.com' }}
   IMAP_PORT: ${{ vars.IMAP_PORT || '993' }}
   SMTP_HOST: ${{ vars.SMTP_HOST || 'smtp.office365.com' }}
@@ -104,6 +107,9 @@ jobs:
           azd env set OPENCLAW_TTS_PROVIDER "${OPENCLAW_TTS_PROVIDER}"
           azd env set OPENCLAW_TTS_AUTO "${OPENCLAW_TTS_AUTO}"
           azd env set AZURE_SPEECH_LANGUAGE "${AZURE_SPEECH_LANGUAGE}"
+          azd env set HEARTBEAT_CRON_START "${HEARTBEAT_CRON_START}"
+          azd env set HEARTBEAT_CRON_END "${HEARTBEAT_CRON_END}"
+          azd env set HEARTBEAT_CRON_TIMEZONE "${HEARTBEAT_CRON_TIMEZONE}"
           azd env set IMAP_HOST "${IMAP_HOST}"
           azd env set IMAP_PORT "${IMAP_PORT}"
           azd env set SMTP_HOST "${SMTP_HOST}"

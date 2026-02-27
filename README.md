@@ -68,7 +68,7 @@ This provisions infra, builds the container image in ACR, and deploys to ACA.
 ## What this deploy includes
 
 - Azure Container Apps with `minReplicas=0` (scale-to-zero)
-- Cron wake window every 2 hours for heartbeat tasks
+- Cron wake window hourly from 8:00 AM to 8:00 PM Pacific
 - Persistent Azure File shares mounted at:
   - `/home/node/.openclaw`
   - `/workspace`

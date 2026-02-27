@@ -128,13 +128,13 @@ param minReplicas int = 0
 param maxReplicas int = 2
 
 @description('Cron start expression for periodic wake windows')
-param heartbeatCronStart string = '0 */2 * * *'
+param heartbeatCronStart string = '0 8-20 * * *'
 
 @description('Cron end expression for periodic wake windows')
-param heartbeatCronEnd string = '5 */2 * * *'
+param heartbeatCronEnd string = '5 8-20 * * *'
 
 @description('Timezone for cron wake windows')
-param heartbeatCronTimezone string = 'UTC'
+param heartbeatCronTimezone string = 'America/Los_Angeles'
 
 @description('IP addresses allowed to access the gateway (comma-separated CIDR blocks, e.g., "1.2.3.4/32,10.0.0.0/8"). Leave empty for public access.')
 param allowedIpRanges string = ''

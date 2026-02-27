@@ -79,7 +79,7 @@ const config = {
         fallbacks: fallbackModels,
       },
       heartbeat: {
-        every: env.OPENCLAW_HEARTBEAT_EVERY || "2h",
+        every: env.OPENCLAW_HEARTBEAT_EVERY || "1h",
         target: "last",
         directPolicy: "allow",
       },

@@ -105,6 +105,15 @@ param minReplicas int = 0
 @description('Maximum number of replicas')
 param maxReplicas int = 2
 
+@description('Cron start expression for periodic wake windows')
+param heartbeatCronStart string = '0 8-20 * * *'
+
+@description('Cron end expression for periodic wake windows')
+param heartbeatCronEnd string = '5 8-20 * * *'
+
+@description('Timezone for cron wake windows')
+param heartbeatCronTimezone string = 'America/Los_Angeles'
+
 @description('IP addresses allowed to access the gateway (comma-separated CIDR blocks). Leave empty for public access.')
 param allowedIpRanges string = ''
 
@@ -214,6 +223,9 @@ module openclawApp './modules/openclaw-app.bicep' = {
     containerMemory: containerMemory
     minReplicas: minReplicas
     maxReplicas: maxReplicas
+    heartbeatCronStart: heartbeatCronStart
+    heartbeatCronEnd: heartbeatCronEnd
+    heartbeatCronTimezone: heartbeatCronTimezone
     allowedIpRanges: allowedIpRanges
     internalOnly: internalOnly
   }

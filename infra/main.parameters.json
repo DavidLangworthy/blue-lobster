@@ -80,6 +80,15 @@
     "elevenLabsApiKey": {
       "value": "${ELEVENLABS_API_KEY}"
     },
+    "heartbeatCronStart": {
+      "value": "${HEARTBEAT_CRON_START=0 8-20 * * *}"
+    },
+    "heartbeatCronEnd": {
+      "value": "${HEARTBEAT_CRON_END=5 8-20 * * *}"
+    },
+    "heartbeatCronTimezone": {
+      "value": "${HEARTBEAT_CRON_TIMEZONE=America/Los_Angeles}"
+    },
     "allowedIpRanges": {
       "value": "${ALLOWED_IP_RANGES}"
     },

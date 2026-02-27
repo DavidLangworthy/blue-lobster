@@ -16,11 +16,16 @@ Runtime layout:
 
 - OpenClaw gateway runs in ACA
 - `minReplicas=0` for scale-to-zero
-- Cron scale rule wakes the container every 2 hours
+- Cron scale rule wakes hourly from 8:00 AM to 8:00 PM Pacific
 - Persistent mounts:
   - `/home/node/.openclaw` (sessions/tokens/config)
   - `/workspace` (prompt, ledgers, room state)
   - `/workspace/media` (voice media)
+
+Wake semantics:
+
+- Incoming WhatsApp or Outlook messages do not wake a zero-replica app by themselves in this configuration.
+- The app wakes via ingress HTTP traffic (for example opening the web UI) or during configured cron windows.
 
 ## Model Strategy (Model-as-a-Service)
 
