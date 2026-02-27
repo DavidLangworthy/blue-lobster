@@ -197,11 +197,22 @@ jobs:
           set -euo pipefail
           export SKIP_IMAGE_BUILD=true
 
+          normalize_value() {
+            local raw="$1"
+            raw="${raw%\"}"
+            raw="${raw#\"}"
+            if [ "${raw}" = "''" ] || [ "${raw}" = "\"\"" ] || [ "${raw}" = "null" ]; then
+              raw=""
+            fi
+            printf '%s' "${raw}"
+          }
+
           image_tag="${IMAGE_TAG}"
           has_image_tag=false
           acr_name="${EXISTING_CONTAINER_REGISTRY_NAME:-}"
           app_exists=false
           rg_name="$(azd env get-value AZURE_RESOURCE_GROUP --environment "${AZD_ENV_NAME}" 2>/dev/null || true)"
+          rg_name="$(normalize_value "${rg_name}")"
           if [ -z "${rg_name}" ]; then
             rg_name="rg-${AZD_ENV_NAME}"
           fi
@@ -211,14 +222,24 @@ jobs:
 
           if [ -z "${acr_name}" ]; then
             acr_name="$(azd env get-value CONTAINER_REGISTRY_NAME --environment "${AZD_ENV_NAME}" 2>/dev/null || true)"
+            acr_name="$(normalize_value "${acr_name}")"
           fi
 
           if [ -z "${acr_name}" ]; then
             acr_name="$(az acr list -g "${rg_name}" --query "[0].name" -o tsv 2>/dev/null || true)"
+            acr_name="$(normalize_value "${acr_name}")"
           fi
 
           if az containerapp show -g "${rg_name}" -n openclaw >/dev/null 2>&1; then
             app_exists=true
+          fi
+
+          if [ -z "${acr_name}" ] && [ "${app_exists}" = "true" ]; then
+            current_image="$(az containerapp show -g "${rg_name}" -n openclaw --query "properties.template.containers[0].image" -o tsv 2>/dev/null || true)"
+            current_image="$(normalize_value "${current_image}")"
+            if [[ "${current_image}" == *.azurecr.io/* ]]; then
+              acr_name="${current_image%%.azurecr.io/*}"
+            fi
           fi
 
           if [ -n "${acr_name}" ]; then
