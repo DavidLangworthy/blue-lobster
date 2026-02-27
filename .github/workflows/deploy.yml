@@ -97,8 +97,6 @@ jobs:
           fi
 
           ensure_required "OPENCLAW_GATEWAY_TOKEN" "${OPENCLAW_GATEWAY_TOKEN}"
-          ensure_required "AZURE_OPENAI_ENDPOINT" "${AZURE_OPENAI_ENDPOINT}"
-          ensure_required "AZURE_OPENAI_API_KEY" "${AZURE_OPENAI_API_KEY}"
 
           azd env set AZURE_LOCATION "${AZURE_LOCATION}"
           azd env set AZURE_OPENAI_DEPLOYMENT "${AZURE_OPENAI_DEPLOYMENT}"

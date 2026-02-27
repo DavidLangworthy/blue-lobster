@@ -2,7 +2,35 @@
 
 This is a one-time setup so GitHub Actions can deploy with `azd` using federated identity.
 
-## 1. Create an Entra app registration
+## Zero-manual bootstrap (recommended)
+
+Run the repo script once:
+
+```bash
+chmod +x ./scripts/setup-gitops.sh
+./scripts/setup-gitops.sh \
+  --repo DavidLangworthy/blue-lobster \
+  --aoai-endpoint "https://<your-aoai>.openai.azure.com" \
+  --aoai-key "<aoai-key>"
+```
+
+What it configures:
+
+- Entra app + service principal
+- Federated credential (`repo:...:ref:refs/heads/main`)
+- Azure role assignment (Contributor by default)
+- GitHub secrets and variables required by `.github/workflows/deploy.yml`
+
+Optional flags:
+
+- `--existing-acr-name <name>` to reuse one ACR across environments
+- `--scope <azure-scope>` to limit role assignment
+- `--openclaw-gateway-token <token>` to supply a custom gateway token
+- `--dry-run` to preview actions without applying
+
+## Manual fallback (if you do not use the script)
+
+### 1. Create an Entra app registration
 
 ```bash
 az ad app create --display-name "blue-lobster-github-oidc"
@@ -15,7 +43,7 @@ APP_ID="<app-id>"
 az ad sp create --id "$APP_ID"
 ```
 
-## 2. Add federated credential for GitHub Actions
+### 2. Add federated credential for GitHub Actions
 
 Create `federated-credential.json`:
 
@@ -34,7 +62,7 @@ Apply it:
 az ad app federated-credential create --id "$APP_ID" --parameters @federated-credential.json
 ```
 
-## 3. Grant Azure RBAC to the service principal
+### 3. Grant Azure RBAC to the service principal
 
 Assign at subscription scope (Contributor is simplest to start):
 
@@ -51,7 +79,7 @@ az role assignment create \
 
 For tighter security, use resource-group scope and least-privilege custom roles.
 
-## 4. Add GitHub secrets
+### 4. Add GitHub secrets and variables
 
 Repository `Settings -> Secrets and variables -> Actions`:
 
@@ -61,6 +89,9 @@ Required secrets:
 - `AZURE_TENANT_ID`
 - `AZURE_SUBSCRIPTION_ID`
 - `OPENCLAW_GATEWAY_TOKEN`
+
+Recommended model secrets:
+
 - `AZURE_OPENAI_ENDPOINT`
 - `AZURE_OPENAI_API_KEY`
 
@@ -80,8 +111,9 @@ Recommended repository variables:
 - `AZURE_LOCATION` (example: `eastus2`)
 - `AZURE_OPENAI_DEPLOYMENT` (example: `gpt-5-2`)
 - `OPENCLAW_ROOMS` (example: `living-room,master-bedroom`)
+- `ENABLE_ALERTS` (default `false` for lower idle cost)
 
-## 5. Validate workflow
+## Validate workflow
 
 Push to `main` and check `.github/workflows/deploy.yml` run output.
 

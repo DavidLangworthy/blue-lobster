@@ -18,48 +18,47 @@ git clone https://github.com/DavidLangworthy/blue-lobster.git
 cd blue-lobster
 
 az login
-azd auth login
 ```
 
-### 3. Create an `azd` environment
+### 3. Run one-time GitHub OIDC + repo bootstrap (scripted)
 
 ```bash
-azd env new
+chmod +x ./scripts/setup-gitops.sh
+./scripts/setup-gitops.sh \
+  --repo DavidLangworthy/blue-lobster \
+  --aoai-endpoint "https://<your-aoai>.openai.azure.com" \
+  --aoai-key "<aoai-key>"
 ```
 
-Pick a name like `openclaw-prod`.
+This script creates/updates:
 
-### 4. Set required values
+- Entra app + service principal
+- OIDC federated credential for `main`
+- Azure role assignment for deploys
+- GitHub Actions secrets (`AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`, `OPENCLAW_GATEWAY_TOKEN`, optional AOAI secrets)
+- GitHub Actions variables (location, env name, wake schedule, alerts off, etc.)
 
-```bash
-azd env set AZURE_LOCATION "eastus2"
-azd env set OPENCLAW_GATEWAY_TOKEN "<long-random-token>"
-azd env set AZURE_OPENAI_ENDPOINT "https://<your-aoai>.openai.azure.com"
-azd env set AZURE_OPENAI_API_KEY "<aoai-key>"
-azd env set AZURE_OPENAI_DEPLOYMENT "gpt-5-2"
-```
-
-### 5. Set channel + mailbox values
+### 4. Set channel + mailbox secrets (optional now, needed for full behavior)
 
 ```bash
-azd env set WHATSAPP_ALLOW_FROM "+15551234567"
-azd env set OUTLOOK_EMAIL "you@outlook.com"
-azd env set OUTLOOK_APP_PASSWORD "<outlook-app-password>"
+gh secret set WHATSAPP_ALLOW_FROM -R DavidLangworthy/blue-lobster
+gh secret set OUTLOOK_EMAIL -R DavidLangworthy/blue-lobster
+gh secret set OUTLOOK_APP_PASSWORD -R DavidLangworthy/blue-lobster
 ```
 
 Credential walkthroughs:
 
 - [docs/outlook-whatsapp-credentials.md](docs/outlook-whatsapp-credentials.md)
 
-### 6. Deploy
+### 5. Deploy
 
 ```bash
-azd up
+git push origin main
 ```
 
-This provisions infra, builds the container image in ACR, and deploys to ACA.
+GitHub Actions provisions infra, builds the container image in ACR, and deploys to ACA.
 
-### 7. Pair WhatsApp and test
+### 6. Pair WhatsApp and test
 
 - Open `https://<app-fqdn>/` and authenticate using `OPENCLAW_GATEWAY_TOKEN`
 - Start WhatsApp channel login (QR flow)
@@ -90,6 +89,10 @@ Pushes to `main` auto-deploy via:
 One-time OIDC setup guide:
 
 - [docs/github-oidc-setup.md](docs/github-oidc-setup.md)
+
+GitOps bootstrap script:
+
+- [scripts/setup-gitops.sh](scripts/setup-gitops.sh)
 
 ## Docs
 
