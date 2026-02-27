@@ -47,6 +47,9 @@ param azureOpenAiApiKey string = ''
 @description('Azure OpenAI deployment name')
 param azureOpenAiDeployment string = 'gpt-5-2'
 
+@description('Enable reasoning include for Azure OpenAI responses API (requires model support)')
+param azureOpenAiReasoning string = 'false'
+
 @description('Anthropic API key (optional fallback)')
 @secure()
 param anthropicApiKey string = ''
@@ -312,6 +315,10 @@ resource containerApp 'Microsoft.App/containerApps@2025-01-01' = {
             {
               name: 'AZURE_OPENAI_DEPLOYMENT'
               value: azureOpenAiDeployment
+            }
+            {
+              name: 'AZURE_OPENAI_REASONING'
+              value: azureOpenAiReasoning
             }
             {
               name: 'ANTHROPIC_API_KEY'

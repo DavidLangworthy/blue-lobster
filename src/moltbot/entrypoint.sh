@@ -43,6 +43,7 @@ const rooms = splitCsv(env.OPENCLAW_ROOMS || "living-room,master-bedroom");
 const fallbackModels = splitCsv(env.OPENCLAW_MODEL_FALLBACKS || "");
 const azureOpenAiEndpoint = (env.AZURE_OPENAI_ENDPOINT || "").trim().replace(/\/+$/, "");
 const azureOpenAiDeployment = (env.AZURE_OPENAI_DEPLOYMENT || "gpt-5-2").trim();
+const azureOpenAiReasoning = (env.AZURE_OPENAI_REASONING || "false").trim().toLowerCase() === "true";
 const explicitModel = (env.OPENCLAW_MODEL || "").trim();
 const hasAllowFrom = allowFrom.length > 0;
 const whatsappDmPolicy = (env.WHATSAPP_DM_POLICY || (hasAllowFrom ? "allowlist" : "pairing")).trim();
@@ -201,6 +202,16 @@ const config = {
 };
 
 if (azureOpenAiEndpoint) {
+  const azureModelConfig = {
+    id: azureOpenAiDeployment,
+    name: `Azure ${azureOpenAiDeployment}`,
+    input: ["text", "image"],
+  };
+
+  if (azureOpenAiReasoning) {
+    azureModelConfig.reasoning = true;
+  }
+
   config.models = {
     mode: "merge",
     providers: {
@@ -208,14 +219,7 @@ if (azureOpenAiEndpoint) {
         baseUrl: `${azureOpenAiEndpoint}/openai/v1`,
         apiKey: env.AZURE_OPENAI_API_KEY || "",
         api: "openai-responses",
-        models: [
-          {
-            id: azureOpenAiDeployment,
-            name: `Azure ${azureOpenAiDeployment}`,
-            reasoning: true,
-            input: ["text", "image"],
-          },
-        ],
+        models: [azureModelConfig],
       },
     },
   };

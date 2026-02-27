@@ -31,6 +31,24 @@ param azureOpenAiApiKey string = ''
 @description('Azure OpenAI deployment name')
 param azureOpenAiDeployment string = 'gpt-5-2'
 
+@description('Enable reasoning include for Azure OpenAI responses API (requires model support)')
+param azureOpenAiReasoning string = 'false'
+
+@description('Create an AOAI model deployment when AOAI account is auto-provisioned')
+param deployAzureOpenAiModel bool = true
+
+@description('AOAI model name for the default deployment (for example gpt-4.1 or gpt-5.2-chat)')
+param azureOpenAiModelName string = 'gpt-4.1'
+
+@description('AOAI model version for the default deployment')
+param azureOpenAiModelVersion string = '2025-04-14'
+
+@description('AOAI deployment SKU name (for example Standard or GlobalStandard)')
+param azureOpenAiDeploymentSkuName string = 'Standard'
+
+@description('AOAI deployment SKU capacity')
+param azureOpenAiDeploymentSkuCapacity int = 1
+
 @description('Anthropic API key for optional fallback model routing')
 @secure()
 param anthropicApiKey string = ''
@@ -164,6 +182,12 @@ module azureOpenAi './modules/azure-openai.bicep' = if (deployAzureOpenAi && emp
     location: location
     tags: tags
     skuName: azureOpenAiSkuName
+    deployModel: deployAzureOpenAiModel
+    deploymentName: azureOpenAiDeployment
+    deploymentModelName: azureOpenAiModelName
+    deploymentModelVersion: azureOpenAiModelVersion
+    deploymentSkuName: azureOpenAiDeploymentSkuName
+    deploymentSkuCapacity: azureOpenAiDeploymentSkuCapacity
   }
 }
 
@@ -245,6 +269,7 @@ module openclawApp './modules/openclaw-app.bicep' = {
     azureOpenAiEndpoint: effectiveAzureOpenAiEndpoint
     azureOpenAiApiKey: effectiveAzureOpenAiApiKey
     azureOpenAiDeployment: azureOpenAiDeployment
+    azureOpenAiReasoning: azureOpenAiReasoning
     anthropicApiKey: anthropicApiKey
     openclawGatewayToken: openclawGatewayToken
     openclawPersonaName: openclawPersonaName

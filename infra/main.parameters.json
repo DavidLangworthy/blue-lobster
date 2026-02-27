@@ -29,6 +29,24 @@
     "azureOpenAiDeployment": {
       "value": "${AZURE_OPENAI_DEPLOYMENT=gpt-5-2}"
     },
+    "azureOpenAiReasoning": {
+      "value": "${AZURE_OPENAI_REASONING=false}"
+    },
+    "deployAzureOpenAiModel": {
+      "value": "${DEPLOY_AZURE_OPENAI_MODEL=true}"
+    },
+    "azureOpenAiModelName": {
+      "value": "${AZURE_OPENAI_MODEL_NAME=gpt-4.1}"
+    },
+    "azureOpenAiModelVersion": {
+      "value": "${AZURE_OPENAI_MODEL_VERSION=2025-04-14}"
+    },
+    "azureOpenAiDeploymentSkuName": {
+      "value": "${AZURE_OPENAI_DEPLOYMENT_SKU_NAME=Standard}"
+    },
+    "azureOpenAiDeploymentSkuCapacity": {
+      "value": "${AZURE_OPENAI_DEPLOYMENT_SKU_CAPACITY=1}"
+    },
     "anthropicApiKey": {
       "value": "${ANTHROPIC_API_KEY}"
     },
