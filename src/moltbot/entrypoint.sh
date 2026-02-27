@@ -230,4 +230,12 @@ NODE
 
 echo "OpenClaw configuration written to ${CONFIG_FILE}"
 
+if [[ "${OPENCLAW_IGNORE_CHMOD_ERRORS:-true}" == "true" ]]; then
+  if [[ -n "${NODE_OPTIONS:-}" ]]; then
+    export NODE_OPTIONS="--require=/app/chmod-shim.cjs ${NODE_OPTIONS}"
+  else
+    export NODE_OPTIONS="--require=/app/chmod-shim.cjs"
+  fi
+fi
+
 exec node dist/index.js gateway --bind lan --port "${GATEWAY_PORT:-18789}" --allow-unconfigured "$@"

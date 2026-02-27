@@ -30,6 +30,7 @@ RUN mkdir -p /home/node/.openclaw /workspace /workspace/canvas
 COPY entrypoint.sh /app/entrypoint.sh
 COPY init-workspace.sh /app/init-workspace.sh
 COPY azure-stt.sh /app/azure-stt.sh
+COPY chmod-shim.cjs /app/chmod-shim.cjs
 RUN chmod +x /app/entrypoint.sh /app/init-workspace.sh /app/azure-stt.sh
 
 ENV NODE_ENV=production
