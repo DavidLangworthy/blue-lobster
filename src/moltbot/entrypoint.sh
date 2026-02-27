@@ -66,11 +66,6 @@ const roomAgents = rooms
   }));
 
 const config = {
-  identity: {
-    name: env.OPENCLAW_PERSONA_NAME || "Clawd",
-    theme: "interior design and procurement assistant",
-    emoji: "🦞",
-  },
   agents: {
     defaults: {
       workspace,
@@ -208,7 +203,7 @@ if (azureOpenAiEndpoint) {
     providers: {
       "azure-openai": {
         baseUrl: `${azureOpenAiEndpoint}/openai/v1`,
-        apiKey: "${AZURE_OPENAI_API_KEY}",
+        apiKey: env.AZURE_OPENAI_API_KEY || "",
         api: "openai-responses",
         models: [
           {
