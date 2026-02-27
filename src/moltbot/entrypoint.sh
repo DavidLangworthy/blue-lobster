@@ -5,8 +5,10 @@ set -euo pipefail
 
 CONFIG_DIR="${HOME:-/home/node}/.openclaw"
 CONFIG_FILE="${CONFIG_DIR}/openclaw.json"
+WORKSPACE_DIR="${OPENCLAW_WORKSPACE:-/workspace}"
 
 mkdir -p "${CONFIG_DIR}"
+mkdir -p "${WORKSPACE_DIR}" "${WORKSPACE_DIR}/media" "${WORKSPACE_DIR}/canvas"
 
 /app/init-workspace.sh
 
@@ -247,6 +249,10 @@ process.stdout.write(`${JSON.stringify(config, null, 2)}\n`);
 NODE
 
 echo "OpenClaw configuration written to ${CONFIG_FILE}"
+
+# Azure Files mounts can preserve restrictive ownership across revisions.
+# Grant group/world write so OpenClaw can rotate config/session files at runtime.
+chmod -R a+rwX "${CONFIG_DIR}" "${WORKSPACE_DIR}" 2>/dev/null || true
 
 if [[ "${OPENCLAW_IGNORE_CHMOD_ERRORS:-true}" == "true" ]]; then
   if [[ -n "${NODE_OPTIONS:-}" ]]; then
