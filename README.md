@@ -92,6 +92,7 @@ Deploys pin ACA to an immutable image tag (`IMAGE_TAG`, default: commit SHA) ins
 - Azure OpenAI model-as-a-service wiring (`openai-responses` API style)
 - AOAI reasoning include disabled by default (`AZURE_OPENAI_REASONING=false`) for broad model compatibility
 - AOAI liveness probe script: `./scripts/aoai-liveness.sh`
+- Anthropic fallback is optional and auto-disabled unless `ANTHROPIC_API_KEY` is set
 - Optional Azure Speech STT (`src/moltbot/azure-stt.sh`)
 - Optional ElevenLabs TTS via `ELEVENLABS_API_KEY`
 - Live Canvas over ingress with room paths like:

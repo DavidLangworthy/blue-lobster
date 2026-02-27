@@ -121,6 +121,13 @@ jobs:
 
           ensure_required "OPENCLAW_GATEWAY_TOKEN" "${OPENCLAW_GATEWAY_TOKEN}"
 
+          has_external_aoai=false
+          if [ -n "${AZURE_OPENAI_ENDPOINT}" ] && [ -n "${AZURE_OPENAI_API_KEY}" ]; then
+            has_external_aoai=true
+          elif [ -n "${AZURE_OPENAI_ENDPOINT}" ] || [ -n "${AZURE_OPENAI_API_KEY}" ]; then
+            echo "WARN: ignoring partial AOAI override (set both AZURE_OPENAI_ENDPOINT and AZURE_OPENAI_API_KEY)."
+          fi
+
           azd env set AZURE_LOCATION "${AZURE_LOCATION}"
           azd env set AZURE_SUBSCRIPTION_ID "${{ secrets.AZURE_SUBSCRIPTION_ID }}"
           azd env set AZURE_TENANT_ID "${{ secrets.AZURE_TENANT_ID }}"
@@ -136,7 +143,6 @@ jobs:
           azd env set OPENCLAW_PERSONA_NAME "${OPENCLAW_PERSONA_NAME}"
           azd env set IMAGE_TAG "${IMAGE_TAG}"
           azd env set OPENCLAW_ROOMS "${OPENCLAW_ROOMS}"
-          azd env set OPENCLAW_MODEL_FALLBACKS "${OPENCLAW_MODEL_FALLBACKS}"
           azd env set OPENCLAW_TTS_PROVIDER "${OPENCLAW_TTS_PROVIDER}"
           azd env set OPENCLAW_TTS_AUTO "${OPENCLAW_TTS_AUTO}"
           azd env set OPENCLAW_CONTROLUI_DISABLE_DEVICE_AUTH "${OPENCLAW_CONTROLUI_DISABLE_DEVICE_AUTH}"
@@ -154,10 +160,23 @@ jobs:
           azd env set ENABLE_ALERTS "${ENABLE_ALERTS}"
           azd env set INTERNAL_ONLY "${INTERNAL_ONLY}"
 
-          set_if_present AZURE_OPENAI_ENDPOINT "${AZURE_OPENAI_ENDPOINT}"
-          set_if_present AZURE_OPENAI_API_KEY "${AZURE_OPENAI_API_KEY}"
+          if [ "${has_external_aoai}" = "true" ]; then
+            azd env set AZURE_OPENAI_ENDPOINT "${AZURE_OPENAI_ENDPOINT}"
+            azd env set AZURE_OPENAI_API_KEY "${AZURE_OPENAI_API_KEY}"
+          else
+            azd env set AZURE_OPENAI_ENDPOINT ""
+            azd env set AZURE_OPENAI_API_KEY ""
+          fi
+
+          if [ -n "${ANTHROPIC_API_KEY}" ]; then
+            azd env set OPENCLAW_MODEL_FALLBACKS "${OPENCLAW_MODEL_FALLBACKS}"
+            azd env set ANTHROPIC_API_KEY "${ANTHROPIC_API_KEY}"
+          else
+            azd env set OPENCLAW_MODEL_FALLBACKS ""
+            azd env set ANTHROPIC_API_KEY ""
+          fi
+
           set_if_present AZURE_OPENAI_ACCOUNT_NAME "${AZURE_OPENAI_ACCOUNT_NAME}"
-          set_if_present ANTHROPIC_API_KEY "${ANTHROPIC_API_KEY}"
           set_if_present EXISTING_CONTAINER_REGISTRY_NAME "${EXISTING_CONTAINER_REGISTRY_NAME}"
           set_if_present OPENCLAW_GATEWAY_TOKEN "${OPENCLAW_GATEWAY_TOKEN}"
           set_if_present WHATSAPP_ALLOW_FROM "${WHATSAPP_ALLOW_FROM}"

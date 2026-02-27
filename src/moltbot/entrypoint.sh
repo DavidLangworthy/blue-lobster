@@ -40,11 +40,19 @@ function titleCase(input) {
 const workspace = env.OPENCLAW_WORKSPACE || "/workspace";
 const allowFrom = splitCsv(env.WHATSAPP_ALLOW_FROM);
 const rooms = splitCsv(env.OPENCLAW_ROOMS || "living-room,master-bedroom");
-const fallbackModels = splitCsv(env.OPENCLAW_MODEL_FALLBACKS || "");
+const rawFallbackModels = splitCsv(env.OPENCLAW_MODEL_FALLBACKS || "");
 const azureOpenAiEndpoint = (env.AZURE_OPENAI_ENDPOINT || "").trim().replace(/\/+$/, "");
 const azureOpenAiDeployment = (env.AZURE_OPENAI_DEPLOYMENT || "gpt-5-2").trim();
 const azureOpenAiReasoning = (env.AZURE_OPENAI_REASONING || "false").trim().toLowerCase() === "true";
 const explicitModel = (env.OPENCLAW_MODEL || "").trim();
+const anthropicApiKey = (env.ANTHROPIC_API_KEY || "").trim();
+const hasAnthropicKey = anthropicApiKey !== "" && anthropicApiKey !== "not-set";
+const fallbackModels = rawFallbackModels.filter((model) => {
+  if (model.toLowerCase().startsWith("anthropic/") && !hasAnthropicKey) {
+    return false;
+  }
+  return true;
+});
 const hasAllowFrom = allowFrom.length > 0;
 const whatsappDmPolicy = (env.WHATSAPP_DM_POLICY || (hasAllowFrom ? "allowlist" : "pairing")).trim();
 const whatsappGroupPolicy = (env.WHATSAPP_GROUP_POLICY || (hasAllowFrom ? "allowlist" : "disabled")).trim();
