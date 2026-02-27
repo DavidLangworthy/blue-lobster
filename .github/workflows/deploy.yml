@@ -19,6 +19,7 @@ env:
   AZURE_LOCATION: ${{ vars.AZURE_LOCATION || 'eastus2' }}
   AZURE_OPENAI_DEPLOYMENT: ${{ vars.AZURE_OPENAI_DEPLOYMENT || 'gpt-5-2' }}
   OPENCLAW_PERSONA_NAME: ${{ vars.OPENCLAW_PERSONA_NAME || 'Clawd' }}
+  OPENCLAW_VERSION: ${{ vars.OPENCLAW_VERSION || 'main' }}
   OPENCLAW_ROOMS: ${{ vars.OPENCLAW_ROOMS || 'living-room,master-bedroom' }}
   OPENCLAW_MODEL_FALLBACKS: ${{ vars.OPENCLAW_MODEL_FALLBACKS || 'anthropic/claude-sonnet-4-6' }}
   EXISTING_CONTAINER_REGISTRY_NAME: ${{ vars.EXISTING_CONTAINER_REGISTRY_NAME }}
@@ -171,6 +172,10 @@ jobs:
             echo "Bootstrap path: provisioning with official image first"
             azd env set USE_OFFICIAL_IMAGE "true"
             azd provision --no-prompt
+
+            echo "Building custom image into ACR after bootstrap provision"
+            acr_name="$(azd env get-values | awk -F= '/^CONTAINER_REGISTRY_NAME=/{gsub(/"/,"",$2);print $2}')"
+            ./scripts/build-image.sh "${acr_name}" "latest" "${OPENCLAW_VERSION}"
 
             echo "Switching to custom ACR image"
             azd env set USE_OFFICIAL_IMAGE "false"
