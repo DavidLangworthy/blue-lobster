@@ -63,7 +63,8 @@ const controlUiDisableDeviceAuth =
 
 const defaultAllow = hasAllowFrom ? allowFrom : [];
 const primaryModel =
-  explicitModel || (azureOpenAiEndpoint ? `azure-openai/${azureOpenAiDeployment}` : "openai/gpt-5.2");
+  explicitModel ||
+  (azureOpenAiEndpoint ? `azure-openai-responses/${azureOpenAiDeployment}` : "openai/gpt-5.2");
 
 const roomAgents = rooms
   .map((r) => ({ id: slugify(r), name: titleCase(r) }))
@@ -217,6 +218,10 @@ if (azureOpenAiEndpoint) {
     id: azureOpenAiDeployment,
     name: `Azure ${azureOpenAiDeployment}`,
     input: ["text", "image"],
+    compat: {
+      // Azure Responses does not support OpenAI's store=true behavior.
+      supportsStore: false,
+    },
   };
 
   if (azureOpenAiReasoning) {
@@ -226,9 +231,11 @@ if (azureOpenAiEndpoint) {
   config.models = {
     mode: "merge",
     providers: {
-      "azure-openai": {
+      "azure-openai-responses": {
         baseUrl: `${azureOpenAiEndpoint}/openai/v1`,
         apiKey: env.AZURE_OPENAI_API_KEY || "",
+        auth: "api-key",
+        authHeader: false,
         api: "openai-responses",
         models: [azureModelConfig],
       },
