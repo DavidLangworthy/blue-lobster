@@ -15,7 +15,7 @@ RUN apt-get update && apt-get install -y \
 
 WORKDIR /app
 
-ARG OPENCLAW_VERSION=main
+ARG OPENCLAW_VERSION=v2026.2.26
 RUN git clone --depth 1 --branch ${OPENCLAW_VERSION} https://github.com/openclaw/openclaw.git .
 
 RUN corepack enable

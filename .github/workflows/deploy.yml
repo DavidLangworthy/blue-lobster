@@ -28,8 +28,8 @@ env:
   AZURE_OPENAI_DEPLOYMENT_SKU_CAPACITY: ${{ vars.AZURE_OPENAI_DEPLOYMENT_SKU_CAPACITY || '1' }}
   AZURE_OPENAI_REASONING: ${{ vars.AZURE_OPENAI_REASONING || 'false' }}
   OPENCLAW_PERSONA_NAME: ${{ vars.OPENCLAW_PERSONA_NAME || 'Clawd' }}
-  OPENCLAW_VERSION: ${{ vars.OPENCLAW_VERSION || 'main' }}
-  IMAGE_TAG: ${{ vars.IMAGE_TAG || github.sha }}
+  OPENCLAW_VERSION: ${{ vars.OPENCLAW_VERSION || 'v2026.2.26' }}
+  IMAGE_TAG_OVERRIDE: ${{ vars.IMAGE_TAG_OVERRIDE }}
   OPENCLAW_ROOMS: ${{ vars.OPENCLAW_ROOMS || 'living-room,master-bedroom' }}
   OPENCLAW_MODEL_FALLBACKS: ${{ vars.OPENCLAW_MODEL_FALLBACKS }}
   EXISTING_CONTAINER_REGISTRY_NAME: ${{ vars.EXISTING_CONTAINER_REGISTRY_NAME }}
@@ -57,6 +57,25 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Compute Image Tag
+        id: image_tag
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [ -n "${IMAGE_TAG_OVERRIDE:-}" ]; then
+            image_tag="${IMAGE_TAG_OVERRIDE}"
+            tag_source="override"
+          else
+            src_tree_hash="$(git rev-parse HEAD:src/moltbot)"
+            image_tag="src-${src_tree_hash:0:16}"
+            tag_source="src-tree"
+          fi
+
+          echo "image_tag=${image_tag}" >> "${GITHUB_OUTPUT}"
+          echo "tag_source=${tag_source}" >> "${GITHUB_OUTPUT}"
+          echo "Resolved image tag: ${image_tag} (${tag_source})"
+
       - name: Azure Login (OIDC)
         uses: azure/login@v2
         with:
@@ -78,6 +97,7 @@ jobs:
       - name: Initialize azd environment
         shell: bash
         env:
+          IMAGE_TAG: ${{ steps.image_tag.outputs.image_tag }}
           AZURE_OPENAI_ENDPOINT: ${{ secrets.AZURE_OPENAI_ENDPOINT }}
           AZURE_OPENAI_API_KEY: ${{ secrets.AZURE_OPENAI_API_KEY }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
@@ -197,6 +217,8 @@ jobs:
 
       - name: Provision + Deploy
         shell: bash
+        env:
+          IMAGE_TAG: ${{ steps.image_tag.outputs.image_tag }}
         run: |
           set -euo pipefail
           export SKIP_IMAGE_BUILD=true
