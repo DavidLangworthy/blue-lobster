@@ -40,6 +40,26 @@ echo
 echo "Deployment status summary"
 echo "Gateway URL: ${GATEWAY_URL}"
 echo "Health: ${IS_HEALTHY}"
+
+AOAI_ENDPOINT="${AZURE_OPENAI_ENDPOINT:-}"
+AOAI_KEY="${AZURE_OPENAI_API_KEY:-}"
+AOAI_DEPLOYMENT="${AZURE_OPENAI_DEPLOYMENT:-}"
+AOAI_ACCOUNT_NAME="${AZURE_OPENAI_ACCOUNT_NAME:-}"
+AOAI_LIVENESS="skipped"
+
+if [ -z "${AOAI_KEY}" ] && [ -n "${AOAI_ACCOUNT_NAME}" ] && [ -n "${RESOURCE_GROUP}" ] && command -v az >/dev/null 2>&1; then
+  AOAI_KEY="$(az cognitiveservices account keys list -g "${RESOURCE_GROUP}" -n "${AOAI_ACCOUNT_NAME}" --query key1 -o tsv 2>/dev/null || true)"
+fi
+
+if [ -n "${AOAI_ENDPOINT}" ] && [ -n "${AOAI_KEY}" ] && [ -n "${AOAI_DEPLOYMENT}" ]; then
+  if ./scripts/aoai-liveness.sh --endpoint "${AOAI_ENDPOINT}" --api-key "${AOAI_KEY}" --deployment "${AOAI_DEPLOYMENT}"; then
+    AOAI_LIVENESS="ok"
+  else
+    AOAI_LIVENESS="failed"
+  fi
+fi
+
+echo "AOAI liveness: ${AOAI_LIVENESS}"
 echo
 echo "Next steps"
 if [ -n "${RESOURCE_GROUP}" ] && [ -n "${APP_NAME}" ]; then

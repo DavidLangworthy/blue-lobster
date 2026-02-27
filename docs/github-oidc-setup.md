@@ -110,6 +110,12 @@ Recommended repository variables:
 - `AZD_ENV_NAME` (example: `openclaw-prod`)
 - `AZURE_LOCATION` (example: `eastus2`)
 - `AZURE_OPENAI_DEPLOYMENT` (example: `gpt-5-2`)
+- `DEPLOY_AZURE_OPENAI_MODEL` (default `true`)
+- `AZURE_OPENAI_MODEL_NAME` (default `gpt-4.1`)
+- `AZURE_OPENAI_MODEL_VERSION` (default `2025-04-14`)
+- `AZURE_OPENAI_DEPLOYMENT_SKU_NAME` (default `Standard`)
+- `AZURE_OPENAI_DEPLOYMENT_SKU_CAPACITY` (default `1`)
+- `AZURE_OPENAI_REASONING` (default `false`)
 - `OPENCLAW_ROOMS` (example: `living-room,master-bedroom`)
 - `ENABLE_ALERTS` (default `false` for lower idle cost)
 
@@ -123,3 +129,4 @@ The workflow will:
 2. Select/create the `azd` environment
 3. Apply env settings
 4. Run `azd up --no-prompt`
+5. Run AOAI endpoint/deployment liveness probe

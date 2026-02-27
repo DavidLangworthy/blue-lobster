@@ -35,6 +35,7 @@ Primary model path:
 - Azure OpenAI endpoint + key (pay-per-token)
 - Deployment defaults to `gpt-5-2`
 - OpenClaw provider is configured as an OpenAI-compatible endpoint with `openai-responses` API mode
+- `AZURE_OPENAI_REASONING=false` by default to avoid unsupported `reasoning.encrypted_content` includes on non-reasoning deployments
 - Bicep auto-provisions an Azure OpenAI account when endpoint/key are not supplied via secrets
 
 This avoids dedicated PTU requirements and keeps cost usage-based.
@@ -126,6 +127,12 @@ curl -sS "https://$(az containerapp show -g "$RG" -n "$APP" --query properties.c
 
 Open the printed URL and confirm the dashboard connects.
 
+Optional AOAI deployment check:
+
+```bash
+./scripts/aoai-liveness.sh
+```
+
 ### 2. Web UX -> LLM -> Web UX reply
 
 1. In dashboard chat, send: `E2E-WEB: reply with exactly "web-ok"`.
@@ -167,6 +174,8 @@ Expected: app returns healthy, and WhatsApp session reconnects without requiring
 |---|---|---|
 | `No API key found for provider "openai"` | `AZURE_OPENAI_ENDPOINT` empty so config falls back to `openai/*` | Ensure `DEPLOY_AZURE_OPENAI=true` or set `AZURE_OPENAI_ENDPOINT` secret |
 | `HTTP 401 authentication_error` from AOAI provider | Wrong AOAI key | Rotate key and update `AZURE_OPENAI_API_KEY` |
+| `404 The API deployment for this resource does not exist` | `AZURE_OPENAI_DEPLOYMENT` does not match an AOAI deployment name | Create/update deployment and rerun `./scripts/aoai-liveness.sh` |
+| `400 Encrypted content is not supported with this model` | Reasoning include sent to a deployment that does not support encrypted reasoning content | Keep `AZURE_OPENAI_REASONING=false` (default) or switch to a model/deployment that supports encrypted content |
 | `HTTP 401 invalid x-api-key` for Anthropic | Optional fallback enabled without valid Anthropic key | Leave `OPENCLAW_MODEL_FALLBACKS` empty unless Anthropic is configured |
 | Dashboard connected but no model replies | Gateway auth is fine, model provider auth is not | Check `AZURE_OPENAI_ENDPOINT`, `AZURE_OPENAI_API_KEY`, and deployment name |
 

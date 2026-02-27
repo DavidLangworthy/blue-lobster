@@ -18,9 +18,15 @@ env:
   AZD_ENV_NAME: ${{ vars.AZD_ENV_NAME || 'openclaw-prod' }}
   AZURE_LOCATION: ${{ vars.AZURE_LOCATION || 'eastus2' }}
   DEPLOY_AZURE_OPENAI: ${{ vars.DEPLOY_AZURE_OPENAI || 'true' }}
+  DEPLOY_AZURE_OPENAI_MODEL: ${{ vars.DEPLOY_AZURE_OPENAI_MODEL || 'true' }}
   AZURE_OPENAI_ACCOUNT_NAME: ${{ vars.AZURE_OPENAI_ACCOUNT_NAME }}
   AZURE_OPENAI_SKU_NAME: ${{ vars.AZURE_OPENAI_SKU_NAME || 'S0' }}
   AZURE_OPENAI_DEPLOYMENT: ${{ vars.AZURE_OPENAI_DEPLOYMENT || 'gpt-5-2' }}
+  AZURE_OPENAI_MODEL_NAME: ${{ vars.AZURE_OPENAI_MODEL_NAME || 'gpt-4.1' }}
+  AZURE_OPENAI_MODEL_VERSION: ${{ vars.AZURE_OPENAI_MODEL_VERSION || '2025-04-14' }}
+  AZURE_OPENAI_DEPLOYMENT_SKU_NAME: ${{ vars.AZURE_OPENAI_DEPLOYMENT_SKU_NAME || 'Standard' }}
+  AZURE_OPENAI_DEPLOYMENT_SKU_CAPACITY: ${{ vars.AZURE_OPENAI_DEPLOYMENT_SKU_CAPACITY || '1' }}
+  AZURE_OPENAI_REASONING: ${{ vars.AZURE_OPENAI_REASONING || 'false' }}
   OPENCLAW_PERSONA_NAME: ${{ vars.OPENCLAW_PERSONA_NAME || 'Clawd' }}
   OPENCLAW_VERSION: ${{ vars.OPENCLAW_VERSION || 'main' }}
   OPENCLAW_ROOMS: ${{ vars.OPENCLAW_ROOMS || 'living-room,master-bedroom' }}
@@ -117,8 +123,14 @@ jobs:
           azd env set AZURE_SUBSCRIPTION_ID "${{ secrets.AZURE_SUBSCRIPTION_ID }}"
           azd env set AZURE_TENANT_ID "${{ secrets.AZURE_TENANT_ID }}"
           azd env set DEPLOY_AZURE_OPENAI "${DEPLOY_AZURE_OPENAI}"
+          azd env set DEPLOY_AZURE_OPENAI_MODEL "${DEPLOY_AZURE_OPENAI_MODEL}"
           azd env set AZURE_OPENAI_SKU_NAME "${AZURE_OPENAI_SKU_NAME}"
           azd env set AZURE_OPENAI_DEPLOYMENT "${AZURE_OPENAI_DEPLOYMENT}"
+          azd env set AZURE_OPENAI_MODEL_NAME "${AZURE_OPENAI_MODEL_NAME}"
+          azd env set AZURE_OPENAI_MODEL_VERSION "${AZURE_OPENAI_MODEL_VERSION}"
+          azd env set AZURE_OPENAI_DEPLOYMENT_SKU_NAME "${AZURE_OPENAI_DEPLOYMENT_SKU_NAME}"
+          azd env set AZURE_OPENAI_DEPLOYMENT_SKU_CAPACITY "${AZURE_OPENAI_DEPLOYMENT_SKU_CAPACITY}"
+          azd env set AZURE_OPENAI_REASONING "${AZURE_OPENAI_REASONING}"
           azd env set OPENCLAW_PERSONA_NAME "${OPENCLAW_PERSONA_NAME}"
           azd env set OPENCLAW_ROOMS "${OPENCLAW_ROOMS}"
           azd env set OPENCLAW_MODEL_FALLBACKS "${OPENCLAW_MODEL_FALLBACKS}"
@@ -188,3 +200,32 @@ jobs:
             azd env set USE_OFFICIAL_IMAGE "false" --environment "${AZD_ENV_NAME}"
             azd provision --environment "${AZD_ENV_NAME}" --no-prompt
           fi
+
+      - name: AOAI liveness probe
+        shell: bash
+        env:
+          AZURE_OPENAI_API_KEY_OVERRIDE: ${{ secrets.AZURE_OPENAI_API_KEY }}
+        run: |
+          set -euo pipefail
+
+          rg_name="$(azd env get-value AZURE_RESOURCE_GROUP --environment "${AZD_ENV_NAME}" 2>/dev/null || true)"
+          endpoint="$(azd env get-value AZURE_OPENAI_ENDPOINT --environment "${AZD_ENV_NAME}" 2>/dev/null || true)"
+          deployment="$(azd env get-value AZURE_OPENAI_DEPLOYMENT --environment "${AZD_ENV_NAME}" 2>/dev/null || true)"
+          api_key="${AZURE_OPENAI_API_KEY_OVERRIDE:-}"
+
+          if [ -z "${api_key}" ]; then
+            account_name="$(azd env get-value AZURE_OPENAI_ACCOUNT_NAME --environment "${AZD_ENV_NAME}" 2>/dev/null || true)"
+            if [ -n "${account_name}" ] && [ -n "${rg_name}" ]; then
+              api_key="$(az cognitiveservices account keys list -g "${rg_name}" -n "${account_name}" --query key1 -o tsv 2>/dev/null || true)"
+            fi
+          fi
+
+          if [ -z "${endpoint}" ] || [ -z "${deployment}" ] || [ -z "${api_key}" ]; then
+            echo "Skipping AOAI liveness probe (missing endpoint, deployment, or key)."
+            exit 0
+          fi
+
+          ./scripts/aoai-liveness.sh \
+            --endpoint "${endpoint}" \
+            --api-key "${api_key}" \
+            --deployment "${deployment}"

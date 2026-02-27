@@ -70,6 +70,11 @@ GitHub Actions provisions infra, builds the container image in ACR, and deploys 
 - Open the printed URL
 - Start WhatsApp channel login (QR flow)
 - Send a test message and a voice note
+- Validate AOAI endpoint/deployment liveness:
+
+```bash
+./scripts/aoai-liveness.sh
+```
 
 ## What this deploy includes
 
@@ -81,6 +86,8 @@ GitHub Actions provisions infra, builds the container image in ACR, and deploys 
   - `/workspace`
   - `/workspace/media`
 - Azure OpenAI model-as-a-service wiring (`openai-responses` API style)
+- AOAI reasoning include disabled by default (`AZURE_OPENAI_REASONING=false`) for broad model compatibility
+- AOAI liveness probe script: `./scripts/aoai-liveness.sh`
 - Optional Azure Speech STT (`src/moltbot/azure-stt.sh`)
 - Optional ElevenLabs TTS via `ELEVENLABS_API_KEY`
 - Live Canvas over ingress with room paths like:
