@@ -207,19 +207,29 @@ jobs:
             raw="${raw#\"}"
             raw="${raw%\'}"
             raw="${raw#\'}"
-            raw="$(printf '%s' "${raw}" | tr -d '\r\n\t ')"
+            raw="$(printf '%s' "${raw}" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
             if [ "${raw}" = "''" ] || [ "${raw}" = "\"\"" ] || [ "${raw}" = "null" ]; then
               raw=""
             fi
             printf '%s' "${raw}"
           }
 
+          get_azd_value() {
+            local key="$1"
+            local value
+            value="$(azd env get-value "${key}" --environment "${AZD_ENV_NAME}" 2>/dev/null || true)"
+            value="$(normalize_value "${value}")"
+            if [[ "${value}" == ERROR:* ]] || [[ "${value}" == error:* ]]; then
+              value=""
+            fi
+            printf '%s' "${value}"
+          }
+
           image_tag="${IMAGE_TAG}"
           has_image_tag=false
           acr_name="${EXISTING_CONTAINER_REGISTRY_NAME:-}"
           app_exists=false
-          rg_name="$(azd env get-value AZURE_RESOURCE_GROUP --environment "${AZD_ENV_NAME}" 2>/dev/null || true)"
-          rg_name="$(normalize_value "${rg_name}")"
+          rg_name="$(get_azd_value AZURE_RESOURCE_GROUP)"
           if [ -z "${rg_name}" ]; then
             rg_name="rg-${AZD_ENV_NAME}"
           fi
@@ -228,8 +238,7 @@ jobs:
           azd env set USE_OFFICIAL_IMAGE "false" --environment "${AZD_ENV_NAME}"
 
           if [ -z "${acr_name}" ]; then
-            acr_name="$(azd env get-value CONTAINER_REGISTRY_NAME --environment "${AZD_ENV_NAME}" 2>/dev/null || true)"
-            acr_name="$(normalize_value "${acr_name}")"
+            acr_name="$(get_azd_value CONTAINER_REGISTRY_NAME)"
           fi
 
           if [ -z "${acr_name}" ]; then
@@ -271,7 +280,7 @@ jobs:
             azd env set USE_OFFICIAL_IMAGE "true" --environment "${AZD_ENV_NAME}"
             azd provision --environment "${AZD_ENV_NAME}" --no-prompt
             azd env set USE_OFFICIAL_IMAGE "false" --environment "${AZD_ENV_NAME}"
-            acr_name="$(azd env get-value CONTAINER_REGISTRY_NAME --environment "${AZD_ENV_NAME}" 2>/dev/null || true)"
+            acr_name="$(get_azd_value CONTAINER_REGISTRY_NAME)"
             has_image_tag=false
           fi
 
