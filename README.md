@@ -10,6 +10,8 @@ Deploy an OpenClaw agent on Azure Container Apps with scale-to-zero, persistent 
 - Azure CLI
 - Azure Developer CLI (`azd`)
 - GitHub repo admin access
+- `jq`
+- Python 3 + `pip3`
 
 ### 2. Clone and sign in
 
@@ -25,7 +27,8 @@ az login
 ```bash
 chmod +x ./scripts/setup-gitops.sh
 ./scripts/setup-gitops.sh \
-  --repo DavidLangworthy/blue-lobster
+  --repo DavidLangworthy/blue-lobster \
+  --install-tools
 ```
 
 This script creates/updates:

@@ -19,6 +19,8 @@ Options:
   --openclaw-gateway-token <token>  OPENCLAW_GATEWAY_TOKEN secret (default: generated)
   --aoai-endpoint <url>             Optional AZURE_OPENAI_ENDPOINT secret override
   --aoai-key <key>                  Optional AZURE_OPENAI_API_KEY secret override
+  --install-tools                   Attempt to install missing CLI prerequisites (Homebrew-based)
+  --skip-provider-registration      Skip Azure resource provider registration checks
   --dry-run                         Print planned actions without applying
   -h, --help                        Show help
 
@@ -28,10 +30,124 @@ Examples:
 USAGE
 }
 
-require_cmd() {
+MISSING_CMDS=()
+
+append_missing() {
   local cmd="$1"
-  if ! command -v "${cmd}" >/dev/null 2>&1; then
-    echo "ERROR: required command not found: ${cmd}" >&2
+  MISSING_CMDS+=("${cmd}")
+}
+
+check_cmd() {
+  local cmd="$1"
+  command -v "${cmd}" >/dev/null 2>&1
+}
+
+install_with_brew() {
+  local package="$1"
+  if [[ "${DRY_RUN}" == "true" ]]; then
+    echo "+ brew install ${package}"
+  else
+    brew install "${package}"
+  fi
+}
+
+install_missing_tools() {
+  if [[ "${#MISSING_CMDS[@]}" -eq 0 ]]; then
+    return 0
+  fi
+
+  if ! command -v brew >/dev/null 2>&1; then
+    echo "ERROR: missing tools: ${MISSING_CMDS[*]}" >&2
+    echo "Install Homebrew or install these tools manually, then rerun." >&2
+    return 1
+  fi
+
+  local installed_any="false"
+  local cmd
+  for cmd in "${MISSING_CMDS[@]}"; do
+    case "${cmd}" in
+      az)
+        install_with_brew "azure-cli"
+        installed_any="true"
+        ;;
+      azd)
+        install_with_brew "azure-dev"
+        installed_any="true"
+        ;;
+      gh)
+        install_with_brew "gh"
+        installed_any="true"
+        ;;
+      jq)
+        install_with_brew "jq"
+        installed_any="true"
+        ;;
+      python3)
+        install_with_brew "python"
+        installed_any="true"
+        ;;
+      pip3)
+        install_with_brew "python"
+        installed_any="true"
+        ;;
+      openssl)
+        install_with_brew "openssl@3"
+        installed_any="true"
+        ;;
+      git)
+        install_with_brew "git"
+        installed_any="true"
+        ;;
+      *)
+        echo "WARN: no automatic installer mapping for '${cmd}'." >&2
+        ;;
+    esac
+  done
+
+  if [[ "${installed_any}" == "true" && "${DRY_RUN}" != "true" ]]; then
+    hash -r
+  fi
+}
+
+ensure_cli_prereqs() {
+  MISSING_CMDS=()
+
+  local required_cmds=(
+    "az"
+    "azd"
+    "gh"
+    "git"
+    "jq"
+    "openssl"
+    "python3"
+    "pip3"
+  )
+
+  local cmd
+  for cmd in "${required_cmds[@]}"; do
+    if ! check_cmd "${cmd}"; then
+      append_missing "${cmd}"
+    fi
+  done
+
+  if [[ "${#MISSING_CMDS[@]}" -eq 0 ]]; then
+    return 0
+  fi
+
+  if [[ "${INSTALL_TOOLS}" == "true" ]]; then
+    echo "Installing missing CLI tools: ${MISSING_CMDS[*]}"
+    install_missing_tools
+    MISSING_CMDS=()
+    for cmd in "${required_cmds[@]}"; do
+      if ! check_cmd "${cmd}"; then
+        append_missing "${cmd}"
+      fi
+    done
+  fi
+
+  if [[ "${#MISSING_CMDS[@]}" -gt 0 ]]; then
+    echo "ERROR: missing required CLI tools: ${MISSING_CMDS[*]}" >&2
+    echo "Rerun with --install-tools or install them manually." >&2
     exit 1
   fi
 }
@@ -83,6 +199,99 @@ set_gh_variable() {
   run_cmd gh variable set "${name}" -R "${repo}" --body "${value}" >/dev/null
 }
 
+register_provider_if_needed() {
+  local namespace="$1"
+  local state
+
+  state="$(
+    az provider show \
+      --namespace "${namespace}" \
+      --query registrationState \
+      -o tsv 2>/dev/null || true
+  )"
+
+  if [[ "${state}" == "Registered" ]]; then
+    echo "Provider already registered: ${namespace}"
+    return 0
+  fi
+
+  echo "Registering provider: ${namespace}"
+  if [[ "${DRY_RUN}" == "true" ]]; then
+    echo "+ az provider register --namespace ${namespace}"
+  else
+    az provider register --namespace "${namespace}" >/dev/null
+  fi
+}
+
+wait_for_provider_registration() {
+  local namespace="$1"
+  local timeout_seconds="${2:-900}"
+  local interval_seconds=10
+  local elapsed=0
+  local state=""
+
+  if [[ "${DRY_RUN}" == "true" ]]; then
+    echo "+ wait for provider registration: ${namespace}"
+    return 0
+  fi
+
+  while [[ "${elapsed}" -lt "${timeout_seconds}" ]]; do
+    state="$(
+      az provider show \
+        --namespace "${namespace}" \
+        --query registrationState \
+        -o tsv 2>/dev/null || true
+    )"
+    if [[ "${state}" == "Registered" ]]; then
+      echo "Provider registered: ${namespace}"
+      return 0
+    fi
+    sleep "${interval_seconds}"
+    elapsed=$((elapsed + interval_seconds))
+  done
+
+  echo "ERROR: provider registration timed out for ${namespace} (last state: ${state:-unknown})" >&2
+  return 1
+}
+
+ensure_required_providers() {
+  local providers=(
+    "Microsoft.App"
+    "Microsoft.Authorization"
+    "Microsoft.CognitiveServices"
+    "Microsoft.ContainerRegistry"
+    "Microsoft.Insights"
+    "Microsoft.ManagedIdentity"
+    "Microsoft.OperationalInsights"
+    "Microsoft.Resources"
+    "Microsoft.Storage"
+  )
+
+  echo "Ensuring Azure resource providers are registered"
+
+  local ns
+  local pids=()
+  for ns in "${providers[@]}"; do
+    register_provider_if_needed "${ns}" &
+    pids+=("$!")
+  done
+
+  local pid
+  for pid in "${pids[@]}"; do
+    wait "${pid}"
+  done
+
+  pids=()
+  for ns in "${providers[@]}"; do
+    wait_for_provider_registration "${ns}" &
+    pids+=("$!")
+  done
+
+  for pid in "${pids[@]}"; do
+    wait "${pid}"
+  done
+}
+
 REPO=""
 BRANCH="main"
 APP_NAME="blue-lobster-github-oidc"
@@ -95,6 +304,8 @@ EXISTING_ACR_NAME=""
 OPENCLAW_GATEWAY_TOKEN=""
 AOAI_ENDPOINT=""
 AOAI_KEY=""
+INSTALL_TOOLS="false"
+SKIP_PROVIDER_REGISTRATION="false"
 DRY_RUN="false"
 
 while [[ $# -gt 0 ]]; do
@@ -110,6 +321,8 @@ while [[ $# -gt 0 ]]; do
     --openclaw-gateway-token) OPENCLAW_GATEWAY_TOKEN="$2"; shift 2 ;;
     --aoai-endpoint) AOAI_ENDPOINT="$2"; shift 2 ;;
     --aoai-key) AOAI_KEY="$2"; shift 2 ;;
+    --install-tools) INSTALL_TOOLS="true"; shift ;;
+    --skip-provider-registration) SKIP_PROVIDER_REGISTRATION="true"; shift ;;
     --dry-run) DRY_RUN="true"; shift ;;
     -h|--help) usage; exit 0 ;;
     *)
@@ -120,10 +333,7 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-require_cmd az
-require_cmd gh
-require_cmd openssl
-require_cmd git
+ensure_cli_prereqs
 
 if [[ -z "${REPO}" ]]; then
   REPO="$(infer_repo_from_origin || true)"
@@ -149,6 +359,12 @@ fi
 echo "Bootstrapping GitOps for ${REPO}"
 echo "Azure subscription: ${SUBSCRIPTION_ID}"
 echo "Azure scope: ${SCOPE}"
+
+if [[ "${SKIP_PROVIDER_REGISTRATION}" != "true" ]]; then
+  ensure_required_providers
+else
+  echo "Skipping provider registration checks (--skip-provider-registration)"
+fi
 
 APP_ID="$(az ad app list --display-name "${APP_NAME}" --query "[0].appId" -o tsv)"
 APP_OBJECT_ID="$(az ad app list --display-name "${APP_NAME}" --query "[0].id" -o tsv)"
@@ -222,8 +438,13 @@ ensure_role_assignment() {
   fi
 }
 
-ensure_role_assignment "${ROLE}"
-ensure_role_assignment "${RBAC_ADMIN_ROLE}"
+echo "Ensuring role assignments"
+ensure_role_assignment "${ROLE}" &
+role_pid_primary=$!
+ensure_role_assignment "${RBAC_ADMIN_ROLE}" &
+role_pid_rbac=$!
+wait "${role_pid_primary}"
+wait "${role_pid_rbac}"
 
 if [[ -z "${OPENCLAW_GATEWAY_TOKEN}" ]]; then
   OPENCLAW_GATEWAY_TOKEN="$(openssl rand -hex 24)"
@@ -258,6 +479,7 @@ set_gh_variable "${REPO}" "INTERNAL_ONLY" "false"
 set_gh_variable "${REPO}" "OPENCLAW_ROOMS" "living-room,master-bedroom"
 set_gh_variable "${REPO}" "OPENCLAW_TTS_PROVIDER" "edge"
 set_gh_variable "${REPO}" "OPENCLAW_TTS_AUTO" "inbound"
+set_gh_variable "${REPO}" "OPENCLAW_CONTROLUI_DISABLE_DEVICE_AUTH" "true"
 set_gh_variable "${REPO}" "AZURE_OPENAI_DEPLOYMENT" "gpt-5-2"
 set_gh_variable "${REPO}" "AZURE_OPENAI_REASONING" "false"
 set_gh_variable "${REPO}" "SCALE_POLLING_INTERVAL_SECONDS" "30"

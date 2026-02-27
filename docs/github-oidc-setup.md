@@ -9,7 +9,8 @@ Run the repo script once:
 ```bash
 chmod +x ./scripts/setup-gitops.sh
 ./scripts/setup-gitops.sh \
-  --repo DavidLangworthy/blue-lobster
+  --repo DavidLangworthy/blue-lobster \
+  --install-tools
 ```
 
 What it configures:
@@ -24,6 +25,8 @@ Optional flags:
 - `--existing-acr-name <name>` to reuse one ACR across environments
 - `--scope <azure-scope>` to limit role assignment
 - `--openclaw-gateway-token <token>` to supply a custom gateway token
+- `--install-tools` to auto-install missing CLI prerequisites with Homebrew
+- `--skip-provider-registration` to skip Azure provider registration checks
 - `--dry-run` to preview actions without applying
 
 ## Manual fallback (if you do not use the script)
