@@ -50,6 +50,8 @@ const whatsappDmPolicy = (env.WHATSAPP_DM_POLICY || (hasAllowFrom ? "allowlist" 
 const whatsappGroupPolicy = (env.WHATSAPP_GROUP_POLICY || (hasAllowFrom ? "allowlist" : "disabled")).trim();
 const controlUiHostHeaderFallback =
   (env.OPENCLAW_CONTROLUI_HOST_HEADER_FALLBACK || "true").trim().toLowerCase() === "true";
+const controlUiDisableDeviceAuth =
+  (env.OPENCLAW_CONTROLUI_DISABLE_DEVICE_AUTH || "true").trim().toLowerCase() === "true";
 
 const defaultAllow = hasAllowFrom ? allowFrom : [];
 const primaryModel =
@@ -188,6 +190,7 @@ const config = {
     controlUi: {
       enabled: true,
       dangerouslyAllowHostHeaderOriginFallback: controlUiHostHeaderFallback,
+      dangerouslyDisableDeviceAuth: controlUiDisableDeviceAuth,
     },
     auth: {
       mode: "token",

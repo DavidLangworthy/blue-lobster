@@ -196,6 +196,12 @@ Expected: app returns healthy, and WhatsApp session reconnects without requiring
   - `./scripts/dashboard-url.sh -g <resource-group> -n <app-name>`
 - Open that URL once in each browser profile; the UI stores the token locally.
 
+### Control UI says "disconnected from gateway" with `pairing required`
+
+- Set `OPENCLAW_CONTROLUI_DISABLE_DEVICE_AUTH=true` (default in this repo).
+- Redeploy so `gateway.controlUi.dangerouslyDisableDeviceAuth=true` is applied.
+- If you intentionally require device pairing, set this to `false` and complete pairing in the UI.
+
 ### WhatsApp disconnected after restart
 
 - Verify Azure Files mounts are attached

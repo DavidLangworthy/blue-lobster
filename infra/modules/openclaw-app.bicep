@@ -76,6 +76,9 @@ param openclawTtsProvider string = 'edge'
 @description('Auto TTS mode (off, inbound, always)')
 param openclawTtsAuto string = 'inbound'
 
+@description('Disable Control UI device-pairing requirement to keep web dashboard websocket connected')
+param openclawControlUiDisableDeviceAuth string = 'true'
+
 @description('Comma-separated WhatsApp allowlist numbers in E.164 format')
 param whatsappAllowFrom string = ''
 
@@ -351,6 +354,10 @@ resource containerApp 'Microsoft.App/containerApps@2025-01-01' = {
             {
               name: 'OPENCLAW_TTS_AUTO'
               value: openclawTtsAuto
+            }
+            {
+              name: 'OPENCLAW_CONTROLUI_DISABLE_DEVICE_AUTH'
+              value: openclawControlUiDisableDeviceAuth
             }
             {
               name: 'WHATSAPP_ALLOW_FROM'

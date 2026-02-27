@@ -75,6 +75,9 @@ param openclawTtsProvider string = 'edge'
 @description('Auto TTS mode (off, inbound, always)')
 param openclawTtsAuto string = 'inbound'
 
+@description('Disable Control UI device-pairing requirement to keep web dashboard websocket connected')
+param openclawControlUiDisableDeviceAuth string = 'true'
+
 @description('Comma-separated WhatsApp allowlist numbers in E.164 format')
 param whatsappAllowFrom string = ''
 
@@ -272,6 +275,7 @@ module openclawApp './modules/openclaw-app.bicep' = {
     openclawRooms: openclawRooms
     openclawTtsProvider: openclawTtsProvider
     openclawTtsAuto: openclawTtsAuto
+    openclawControlUiDisableDeviceAuth: openclawControlUiDisableDeviceAuth
     whatsappAllowFrom: whatsappAllowFrom
     whatsappDmPolicy: whatsappDmPolicy
     whatsappGroupPolicy: whatsappGroupPolicy

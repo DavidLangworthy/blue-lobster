@@ -71,6 +71,9 @@
     "openclawTtsAuto": {
       "value": "${OPENCLAW_TTS_AUTO=inbound}"
     },
+    "openclawControlUiDisableDeviceAuth": {
+      "value": "${OPENCLAW_CONTROLUI_DISABLE_DEVICE_AUTH=true}"
+    },
     "whatsappAllowFrom": {
       "value": "${WHATSAPP_ALLOW_FROM}"
     },
