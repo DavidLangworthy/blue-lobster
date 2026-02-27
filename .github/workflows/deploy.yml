@@ -52,6 +52,14 @@ jobs:
       - name: Install Azure Developer CLI
         uses: azure/setup-azd@v2
 
+      - name: Login azd with federated credentials
+        run: |
+          azd auth login \
+            --client-id "${{ secrets.AZURE_CLIENT_ID }}" \
+            --tenant-id "${{ secrets.AZURE_TENANT_ID }}" \
+            --federated-credential-provider github \
+            --no-prompt
+
       - name: Initialize azd environment
         shell: bash
         env:
