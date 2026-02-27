@@ -25,9 +25,7 @@ az login
 ```bash
 chmod +x ./scripts/setup-gitops.sh
 ./scripts/setup-gitops.sh \
-  --repo DavidLangworthy/blue-lobster \
-  --aoai-endpoint "https://<your-aoai>.openai.azure.com" \
-  --aoai-key "<aoai-key>"
+  --repo DavidLangworthy/blue-lobster
 ```
 
 This script creates/updates:
@@ -35,8 +33,11 @@ This script creates/updates:
 - Entra app + service principal
 - OIDC federated credential for `main`
 - Azure role assignment for deploys
-- GitHub Actions secrets (`AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`, `OPENCLAW_GATEWAY_TOKEN`, optional AOAI secrets)
+- GitHub Actions secrets (`AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`, `OPENCLAW_GATEWAY_TOKEN`)
 - GitHub Actions variables (location, env name, wake schedule, alerts off, etc.)
+
+By default, infra now provisions an Azure OpenAI account and wires endpoint/key automatically in Bicep.
+You only need `AZURE_OPENAI_ENDPOINT` and `AZURE_OPENAI_API_KEY` secrets if you want to override with an existing account.
 
 ### 4. Set channel + mailbox secrets (optional now, needed for full behavior)
 
@@ -106,6 +107,7 @@ GitOps bootstrap script:
 - Advanced architecture and operations: [docs/advanced-deployment.md](docs/advanced-deployment.md)
 - Outlook and WhatsApp credentials: [docs/outlook-whatsapp-credentials.md](docs/outlook-whatsapp-credentials.md)
 - GitHub OIDC setup: [docs/github-oidc-setup.md](docs/github-oidc-setup.md)
+- E2E validation flow: [docs/advanced-deployment.md#e2e-validation-web-ux--whatsapp](docs/advanced-deployment.md#e2e-validation-web-ux--whatsapp)
 
 ## Cost Notes
 

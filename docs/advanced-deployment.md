@@ -35,6 +35,7 @@ Primary model path:
 - Azure OpenAI endpoint + key (pay-per-token)
 - Deployment defaults to `gpt-5-2`
 - OpenClaw provider is configured as an OpenAI-compatible endpoint with `openai-responses` API mode
+- Bicep auto-provisions an Azure OpenAI account when endpoint/key are not supplied via secrets
 
 This avoids dedicated PTU requirements and keeps cost usage-based.
 
@@ -109,13 +110,76 @@ OIDC setup instructions:
 - `EXISTING_CONTAINER_REGISTRY_NAME` can be set to reuse one ACR across environments.
 - If you keep per-environment registries, ACR remains on `Basic` SKU (lowest paid tier).
 
+## E2E Validation (Web UX + WhatsApp)
+
+Use this sequence to prove the full path is working end-to-end.
+
+### 1. Health and tokenized dashboard
+
+```bash
+RG="rg-openclaw-prod"
+APP="openclaw"
+
+curl -sS "https://$(az containerapp show -g "$RG" -n "$APP" --query properties.configuration.ingress.fqdn -o tsv)/health"
+./scripts/dashboard-url.sh -g "$RG" -n "$APP"
+```
+
+Open the printed URL and confirm the dashboard connects.
+
+### 2. Web UX -> LLM -> Web UX reply
+
+1. In dashboard chat, send: `E2E-WEB: reply with exactly "web-ok"`.
+2. Confirm assistant replies `web-ok`.
+3. Verify logs show a successful run:
+
+```bash
+az containerapp logs show -g "$RG" -n "$APP" --tail 200 | rg -n "embedded run agent end|isError=false|All models failed|authentication_error"
+```
+
+Expected: `isError=false` and no auth errors.
+
+### 3. WhatsApp pairing and message loop
+
+1. In dashboard, go to Channels and start WhatsApp login to generate a fresh QR.
+2. On phone: WhatsApp -> Linked devices -> Link a device -> scan QR.
+3. Confirm channel state is linked/running in dashboard.
+4. Send WhatsApp message: `E2E-WHATSAPP`.
+5. Confirm agent replies in the same chat.
+6. Verify logs:
+
+```bash
+az containerapp logs show -g "$RG" -n "$APP" --tail 300 | rg -n "whatsapp|received message|send|health-monitor"
+```
+
+### 4. Persistence check after restart
+
+```bash
+az containerapp revision restart -g "$RG" -n "$APP"
+sleep 20
+az containerapp logs show -g "$RG" -n "$APP" --tail 120 | rg -n "gateway listening|health-monitor started|whatsapp"
+```
+
+Expected: app returns healthy, and WhatsApp session reconnects without requiring a new QR.
+
+## AOAI Auth Troubleshooting Matrix
+
+| Symptom | Likely Cause | Fix |
+|---|---|---|
+| `No API key found for provider "openai"` | `AZURE_OPENAI_ENDPOINT` empty so config falls back to `openai/*` | Ensure `DEPLOY_AZURE_OPENAI=true` or set `AZURE_OPENAI_ENDPOINT` secret |
+| `HTTP 401 authentication_error` from AOAI provider | Wrong AOAI key | Rotate key and update `AZURE_OPENAI_API_KEY` |
+| `HTTP 401 invalid x-api-key` for Anthropic | Optional fallback enabled without valid Anthropic key | Leave `OPENCLAW_MODEL_FALLBACKS` empty unless Anthropic is configured |
+| Dashboard connected but no model replies | Gateway auth is fine, model provider auth is not | Check `AZURE_OPENAI_ENDPOINT`, `AZURE_OPENAI_API_KEY`, and deployment name |
+
 ## Troubleshooting
 
 ### Gateway never becomes healthy
 
 - Check logs:
   - `az containerapp logs show --name <app-name> --resource-group <rg> --follow`
-- Verify `OPENCLAW_GATEWAY_TOKEN`, AOAI endpoint/key, and model deployment name.
+- Verify `OPENCLAW_GATEWAY_TOKEN` is set.
+- For model auth, either:
+  - let Bicep auto-create AOAI (`DEPLOY_AZURE_OPENAI=true`), or
+  - set `AZURE_OPENAI_ENDPOINT` and `AZURE_OPENAI_API_KEY` secrets explicitly.
 
 ### Control UI says "gateway token missing"
 

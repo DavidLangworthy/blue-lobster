@@ -9,9 +9,7 @@ Run the repo script once:
 ```bash
 chmod +x ./scripts/setup-gitops.sh
 ./scripts/setup-gitops.sh \
-  --repo DavidLangworthy/blue-lobster \
-  --aoai-endpoint "https://<your-aoai>.openai.azure.com" \
-  --aoai-key "<aoai-key>"
+  --repo DavidLangworthy/blue-lobster
 ```
 
 What it configures:
@@ -90,10 +88,12 @@ Required secrets:
 - `AZURE_SUBSCRIPTION_ID`
 - `OPENCLAW_GATEWAY_TOKEN`
 
-Recommended model secrets:
+Optional model override secrets:
 
 - `AZURE_OPENAI_ENDPOINT`
 - `AZURE_OPENAI_API_KEY`
+
+If those AOAI secrets are omitted, Bicep auto-provisions Azure OpenAI and wires endpoint/key automatically.
 
 Common optional secrets:
 
