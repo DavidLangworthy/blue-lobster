@@ -22,6 +22,13 @@ This repo deploys OpenClaw on Azure Container Apps via GitOps. Prefer determinis
 5. WhatsApp channel status:
    - Verify paired/connected status or explicit pairing-required state
 
+## Validation Phase Workflow
+- Open one interactive shell in the live container:
+  - `az containerapp exec -g rg-openclaw-prod -n openclaw --command "bash"`
+- Run validation commands from that same shell (avoid repeated exec handshakes/rate limits).
+- If a quick in-container hotfix is needed to unblock testing, apply it there first, then immediately mirror the exact fix into Git-tracked files.
+- Never close a task with live-only drift.
+
 ## Build/Deploy Behavior
 - Workflow computes image tag from `src/moltbot` tree hash.
 - Docs-only commits should reuse existing image tag and skip image rebuild.
