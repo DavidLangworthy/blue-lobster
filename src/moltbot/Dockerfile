@@ -18,6 +18,9 @@ WORKDIR /app
 ARG OPENCLAW_VERSION=v2026.2.26
 RUN git clone --depth 1 --branch ${OPENCLAW_VERSION} https://github.com/openclaw/openclaw.git .
 
+COPY patch-whatsapp-515.cjs /app/patch-whatsapp-515.cjs
+RUN node /app/patch-whatsapp-515.cjs /app/src/web/session.ts
+
 RUN corepack enable
 RUN pnpm install --frozen-lockfile
 RUN pnpm build
