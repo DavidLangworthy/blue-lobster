@@ -79,6 +79,7 @@ This provisions infra, builds the container image in ACR, and deploys to ACA.
 - Live Canvas over ingress with room paths like:
   - `/__openclaw__/canvas/living-room/`
   - `/__openclaw__/canvas/master-bedroom/`
+- Azure Monitor alerts default to off (`ENABLE_ALERTS=false`) to minimize idle cost
 
 ## GitOps
 
@@ -95,3 +96,9 @@ One-time OIDC setup guide:
 - Advanced architecture and operations: [docs/advanced-deployment.md](docs/advanced-deployment.md)
 - Outlook and WhatsApp credentials: [docs/outlook-whatsapp-credentials.md](docs/outlook-whatsapp-credentials.md)
 - GitHub OIDC setup: [docs/github-oidc-setup.md](docs/github-oidc-setup.md)
+
+## Cost Notes
+
+- ACR is already configured with `Basic` SKU (lowest paid tier).
+- For multiple environments, set `EXISTING_CONTAINER_REGISTRY_NAME` to reuse one registry and avoid paying for extra ACR instances.
+- Keep `ENABLE_ALERTS=false` unless you actively need alert rules.

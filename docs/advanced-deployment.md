@@ -7,10 +7,10 @@ This guide covers design decisions, non-default options, and operational details
 Resources deployed by `azd`:
 
 - Azure Container Apps Environment
-- Azure Container Registry
+- Azure Container Registry (Basic SKU, or reused via `EXISTING_CONTAINER_REGISTRY_NAME`)
 - Azure Storage Account with Azure File shares
 - Azure Log Analytics Workspace
-- Optional Azure Monitor scheduled-query alerts
+- Optional Azure Monitor scheduled-query alerts (disabled by default)
 
 Runtime layout:
 
@@ -99,6 +99,12 @@ Deployment workflow:
 OIDC setup instructions:
 
 - [docs/github-oidc-setup.md](github-oidc-setup.md)
+
+## Cost Optimization Defaults
+
+- `ENABLE_ALERTS=false` by default to avoid recurring alert-rule charges.
+- `EXISTING_CONTAINER_REGISTRY_NAME` can be set to reuse one ACR across environments.
+- If you keep per-environment registries, ACR remains on `Basic` SKU (lowest paid tier).
 
 ## Troubleshooting
 

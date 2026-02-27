@@ -9,6 +9,9 @@ param environmentName string
 @description('Primary location for all resources')
 param location string
 
+@description('Optional existing Azure Container Registry name to reuse (reduces baseline cost when using multiple environments)')
+param existingContainerRegistryName string = ''
+
 @description('Azure OpenAI endpoint (for example: https://my-aoai.openai.azure.com)')
 param azureOpenAiEndpoint string = ''
 
@@ -121,7 +124,7 @@ param allowedIpRanges string = ''
 param internalOnly bool = false
 
 @description('Enable security and availability alerts')
-param enableAlerts bool = true
+param enableAlerts bool = false
 
 @description('Email address for alert notifications (leave empty to disable email alerts)')
 param alertEmailAddress string = ''
@@ -129,6 +132,7 @@ param alertEmailAddress string = ''
 var abbrs = loadJsonContent('./abbreviations.json')
 var resourceToken = toLower(uniqueString(subscription().id, environmentName, location))
 var tags = { 'azd-env-name': environmentName }
+var useExistingContainerRegistry = !empty(existingContainerRegistryName)
 
 resource rg 'Microsoft.Resources/resourceGroups@2022-09-01' = {
   name: '${abbrs.resourcesResourceGroups}${environmentName}'
@@ -146,7 +150,7 @@ module logAnalytics './modules/log-analytics.bicep' = {
   }
 }
 
-module containerRegistry './modules/container-registry.bicep' = {
+module containerRegistry './modules/container-registry.bicep' = if (!useExistingContainerRegistry) {
   name: 'container-registry'
   scope: rg
   params: {
@@ -155,6 +159,14 @@ module containerRegistry './modules/container-registry.bicep' = {
     tags: tags
   }
 }
+
+resource existingContainerRegistry 'Microsoft.ContainerRegistry/registries@2023-07-01' existing = if (useExistingContainerRegistry) {
+  scope: rg
+  name: existingContainerRegistryName
+}
+
+var containerRegistryName = useExistingContainerRegistry ? existingContainerRegistry!.name : containerRegistry!.outputs.name
+var containerRegistryLoginServer = useExistingContainerRegistry ? existingContainerRegistry!.properties.loginServer : containerRegistry!.outputs.loginServer
 
 module storageAccount './modules/storage-account.bicep' = {
   name: 'storage-account'
@@ -187,8 +199,8 @@ module openclawApp './modules/openclaw-app.bicep' = {
     tags: tags
     containerAppsEnvironmentId: containerAppsEnvironment.outputs.id
     containerAppsEnvironmentName: containerAppsEnvironment.outputs.name
-    containerRegistryName: containerRegistry.outputs.name
-    containerRegistryLoginServer: containerRegistry.outputs.loginServer
+    containerRegistryName: containerRegistryName
+    containerRegistryLoginServer: containerRegistryLoginServer
     storageAccountName: storageAccount.outputs.name
     homeShareName: storageAccount.outputs.homeShareName
     workspaceShareName: storageAccount.outputs.workspaceShareName
@@ -253,8 +265,8 @@ output AZURE_TENANT_ID string = subscription().tenantId
 output AZURE_SUBSCRIPTION_ID string = subscription().subscriptionId
 output AZURE_RESOURCE_GROUP string = rg.name
 
-output CONTAINER_REGISTRY_NAME string = containerRegistry.outputs.name
-output CONTAINER_REGISTRY_LOGIN_SERVER string = containerRegistry.outputs.loginServer
+output CONTAINER_REGISTRY_NAME string = containerRegistryName
+output CONTAINER_REGISTRY_LOGIN_SERVER string = containerRegistryLoginServer
 
 output OPENCLAW_APP_NAME string = openclawApp.outputs.name
 output OPENCLAW_APP_FQDN string = openclawApp.outputs.fqdn

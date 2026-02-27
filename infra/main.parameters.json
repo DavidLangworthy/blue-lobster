@@ -8,6 +8,9 @@
     "location": {
       "value": "${AZURE_LOCATION}"
     },
+    "existingContainerRegistryName": {
+      "value": "${EXISTING_CONTAINER_REGISTRY_NAME}"
+    },
     "azureOpenAiEndpoint": {
       "value": "${AZURE_OPENAI_ENDPOINT}"
     },
@@ -96,7 +99,7 @@
       "value": "${INTERNAL_ONLY=false}"
     },
     "enableAlerts": {
-      "value": "${ENABLE_ALERTS=true}"
+      "value": "${ENABLE_ALERTS=false}"
     },
     "alertEmailAddress": {
       "value": "${ALERT_EMAIL_ADDRESS}"

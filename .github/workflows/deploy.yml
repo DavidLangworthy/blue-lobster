@@ -21,6 +21,7 @@ env:
   OPENCLAW_PERSONA_NAME: ${{ vars.OPENCLAW_PERSONA_NAME || 'Clawd' }}
   OPENCLAW_ROOMS: ${{ vars.OPENCLAW_ROOMS || 'living-room,master-bedroom' }}
   OPENCLAW_MODEL_FALLBACKS: ${{ vars.OPENCLAW_MODEL_FALLBACKS || 'anthropic/claude-sonnet-4-6' }}
+  EXISTING_CONTAINER_REGISTRY_NAME: ${{ vars.EXISTING_CONTAINER_REGISTRY_NAME }}
   OPENCLAW_TTS_PROVIDER: ${{ vars.OPENCLAW_TTS_PROVIDER || 'edge' }}
   OPENCLAW_TTS_AUTO: ${{ vars.OPENCLAW_TTS_AUTO || 'inbound' }}
   AZURE_SPEECH_LANGUAGE: ${{ vars.AZURE_SPEECH_LANGUAGE || 'en-US' }}
@@ -31,7 +32,7 @@ env:
   IMAP_PORT: ${{ vars.IMAP_PORT || '993' }}
   SMTP_HOST: ${{ vars.SMTP_HOST || 'smtp.office365.com' }}
   SMTP_PORT: ${{ vars.SMTP_PORT || '587' }}
-  ENABLE_ALERTS: ${{ vars.ENABLE_ALERTS || 'true' }}
+  ENABLE_ALERTS: ${{ vars.ENABLE_ALERTS || 'false' }}
   INTERNAL_ONLY: ${{ vars.INTERNAL_ONLY || 'false' }}
 
 jobs:
@@ -120,6 +121,7 @@ jobs:
           set_if_present AZURE_OPENAI_ENDPOINT "${AZURE_OPENAI_ENDPOINT}"
           set_if_present AZURE_OPENAI_API_KEY "${AZURE_OPENAI_API_KEY}"
           set_if_present ANTHROPIC_API_KEY "${ANTHROPIC_API_KEY}"
+          set_if_present EXISTING_CONTAINER_REGISTRY_NAME "${EXISTING_CONTAINER_REGISTRY_NAME}"
           set_if_present OPENCLAW_GATEWAY_TOKEN "${OPENCLAW_GATEWAY_TOKEN}"
           set_if_present WHATSAPP_ALLOW_FROM "${WHATSAPP_ALLOW_FROM}"
           set_if_present WHATSAPP_DM_POLICY "${WHATSAPP_DM_POLICY}"
