@@ -201,6 +201,8 @@ jobs:
             local raw="$1"
             raw="${raw%\"}"
             raw="${raw#\"}"
+            raw="${raw%\'}"
+            raw="${raw#\'}"
             if [ "${raw}" = "''" ] || [ "${raw}" = "\"\"" ] || [ "${raw}" = "null" ]; then
               raw=""
             fi
@@ -232,6 +234,14 @@ jobs:
 
           if az containerapp show -g "${rg_name}" -n openclaw >/dev/null 2>&1; then
             app_exists=true
+          fi
+
+          if [ -z "${acr_name}" ] && [ "${app_exists}" = "true" ]; then
+            registry_server="$(az containerapp show -g "${rg_name}" -n openclaw --query "properties.configuration.registries[0].server" -o tsv 2>/dev/null || true)"
+            registry_server="$(normalize_value "${registry_server}")"
+            if [[ "${registry_server}" == *.azurecr.io ]]; then
+              acr_name="${registry_server%%.azurecr.io}"
+            fi
           fi
 
           if [ -z "${acr_name}" ] && [ "${app_exists}" = "true" ]; then
