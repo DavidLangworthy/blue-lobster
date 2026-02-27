@@ -107,7 +107,7 @@ if [[ "${RUN_ENCRYPTED_PROBE}" != "true" ]]; then
 fi
 
 encrypted_payload="$(cat <<EOF
-{"model":"${DEPLOYMENT}","input":"healthcheck encrypted probe","include":["reasoning.encrypted_content"],"max_output_tokens":8}
+{"model":"${DEPLOYMENT}","input":"healthcheck encrypted probe","include":["reasoning.encrypted_content"],"max_output_tokens":16}
 EOF
 )"
 
