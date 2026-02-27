@@ -1,70 +1,50 @@
 #!/bin/bash
-# ClawdBot Azure Container Apps - Post-Deploy Script
-# This script runs after the application is deployed
+# Post-deploy verification for OpenClaw on Azure Container Apps.
+set -euo pipefail
 
-set -e
+APP_NAME="${OPENCLAW_APP_NAME:-${CLAWDBOT_APP_NAME:-openclaw}}"
+GATEWAY_URL="${OPENCLAW_GATEWAY_URL:-${CLAWDBOT_GATEWAY_URL:-}}"
+RESOURCE_GROUP="${AZURE_RESOURCE_GROUP:-}"
 
-echo "ClawdBot Post-Deploy Verification"
-echo "===================================="
+if [ -z "${GATEWAY_URL}" ]; then
+  echo "ERROR: OPENCLAW_GATEWAY_URL (or CLAWDBOT_GATEWAY_URL) is not set" >&2
+  exit 1
+fi
 
-# Wait for the Container App to be ready
-echo ""
-echo "Waiting for ClawdBot to start..."
+echo "Post-deploy verification"
+echo "Checking gateway health at ${GATEWAY_URL}/health"
 
 MAX_RETRIES=30
 RETRY_COUNT=0
 IS_HEALTHY=false
 
-while [ $RETRY_COUNT -lt $MAX_RETRIES ] && [ "$IS_HEALTHY" = "false" ]; do
-    RETRY_COUNT=$((RETRY_COUNT + 1))
-    HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$CLAWDBOT_GATEWAY_URL/health" 2>/dev/null || echo "000")
-    
-    if [ "$HTTP_CODE" = "200" ]; then
-        IS_HEALTHY=true
-    else
-        echo "   Attempt $RETRY_COUNT/$MAX_RETRIES - Waiting for Gateway..."
-        sleep 10
-    fi
+while [ "${RETRY_COUNT}" -lt "${MAX_RETRIES}" ] && [ "${IS_HEALTHY}" = "false" ]; do
+  RETRY_COUNT=$((RETRY_COUNT + 1))
+  HTTP_CODE="$(curl -s -o /dev/null -w "%{http_code}" "${GATEWAY_URL}/health" 2>/dev/null || echo "000")"
+  if [ "${HTTP_CODE}" = "200" ]; then
+    IS_HEALTHY=true
+  else
+    echo "  attempt ${RETRY_COUNT}/${MAX_RETRIES} - waiting for gateway"
+    sleep 10
+  fi
 done
 
-if [ "$IS_HEALTHY" = "true" ]; then
-    echo ""
-    echo "ClawdBot Gateway is healthy!"
-else
-    echo ""
-    echo "WARNING: ClawdBot Gateway health check timed out"
-    echo "   The container may still be starting. Check logs with:"
-    echo "   az containerapp logs show --name $CLAWDBOT_APP_NAME --resource-group $AZURE_RESOURCE_GROUP --follow"
+if [ "${IS_HEALTHY}" != "true" ]; then
+  echo "WARNING: health check timed out"
+  if [ -n "${RESOURCE_GROUP}" ] && [ -n "${APP_NAME}" ]; then
+    echo "Inspect logs: az containerapp logs show --name ${APP_NAME} --resource-group ${RESOURCE_GROUP} --follow"
+  fi
 fi
 
-echo ""
-echo "ClawdBot Deployment Complete!"
-echo ""
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo ""
-echo "Gateway URL: $CLAWDBOT_GATEWAY_URL"
-echo ""
-echo "Next Steps:"
-echo ""
-echo "   1. Invite your Discord bot to a server:"
-echo "      https://discord.com/oauth2/authorize?client_id=<YOUR_BOT_CLIENT_ID>&permissions=274877991936&scope=bot%20applications.commands"
-echo ""
-echo "      (Get the Client ID from Discord Developer Portal -> Your App -> OAuth2)"
-echo ""
-echo "   2. Message the bot via Discord DM:"
-echo "      - Find the bot in your server's member list"
-echo "      - Right-click -> Message"
-echo "      - Send: Hello!"
-echo ""
-echo "   3. View logs if needed:"
-echo "      az containerapp logs show --name $CLAWDBOT_APP_NAME --resource-group $AZURE_RESOURCE_GROUP --follow"
-echo ""
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo ""
-echo "Important Notes:"
-echo "   - Discord bots require a shared server before you can DM them"
-echo "   - Only users in DISCORD_ALLOWED_USERS can DM the bot"
-echo "   - Model must be exact: openrouter/anthropic/claude-3.5-sonnet"
-echo "   - Estimated cost: ~\$40-60/month"
-echo ""
-echo "Happy chatting with Clawd! 🦞"
+echo
+echo "Deployment status summary"
+echo "Gateway URL: ${GATEWAY_URL}"
+echo "Health: ${IS_HEALTHY}"
+echo
+echo "Next steps"
+echo "1. Open the control UI with your gateway token."
+echo "2. Pair WhatsApp in Channels login (QR flow)."
+echo "3. Test a voice note and verify transcription."
+if [ -n "${RESOURCE_GROUP}" ] && [ -n "${APP_NAME}" ]; then
+  echo "4. Tail logs if needed: az containerapp logs show --name ${APP_NAME} --resource-group ${RESOURCE_GROUP} --follow"
+fi
