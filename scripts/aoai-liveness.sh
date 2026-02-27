@@ -11,6 +11,8 @@ Options:
   --api-key <key>                    AOAI API key (or use AZURE_OPENAI_API_KEY)
   --deployment <name>                AOAI deployment name (or use AZURE_OPENAI_DEPLOYMENT)
   --timeout <seconds>                HTTP timeout per probe (default: 20)
+  --max-retries <count>              Retry count for HTTP 429 responses (default: 5)
+  --retry-backoff <seconds>          Initial backoff for HTTP 429 retries (default: 2)
   --skip-encrypted-probe             Skip encrypted-content capability probe
   --require-encrypted-content        Fail if encrypted-content probe is unsupported
   -h, --help                         Show this help
@@ -21,6 +23,8 @@ ENDPOINT="${AZURE_OPENAI_ENDPOINT:-}"
 API_KEY="${AZURE_OPENAI_API_KEY:-}"
 DEPLOYMENT="${AZURE_OPENAI_DEPLOYMENT:-}"
 TIMEOUT_SECONDS=20
+MAX_RETRIES=5
+RETRY_BACKOFF_SECONDS=2
 RUN_ENCRYPTED_PROBE=true
 REQUIRE_ENCRYPTED_CONTENT=false
 
@@ -40,6 +44,14 @@ while [[ $# -gt 0 ]]; do
       ;;
     --timeout)
       TIMEOUT_SECONDS="${2:-20}"
+      shift 2
+      ;;
+    --max-retries)
+      MAX_RETRIES="${2:-5}"
+      shift 2
+      ;;
+    --retry-backoff)
+      RETRY_BACKOFF_SECONDS="${2:-2}"
       shift 2
       ;;
     --skip-encrypted-probe)
@@ -82,11 +94,40 @@ base_payload="$(cat <<EOF
 EOF
 )"
 
-status="$(curl -sS -m "${TIMEOUT_SECONDS}" -o "${tmp_body}" -w "%{http_code}" \
-  -X POST "${ENDPOINT}/openai/v1/responses" \
-  -H "Content-Type: application/json" \
-  -H "api-key: ${API_KEY}" \
-  -d "${base_payload}")"
+post_with_retry() {
+  local payload="$1"
+  local output_file="$2"
+  local label="$3"
+  local attempt=1
+  local backoff="${RETRY_BACKOFF_SECONDS}"
+
+  while true; do
+    local status
+    status="$(curl -sS -m "${TIMEOUT_SECONDS}" -o "${output_file}" -w "%{http_code}" \
+      -X POST "${ENDPOINT}/openai/v1/responses" \
+      -H "Content-Type: application/json" \
+      -H "api-key: ${API_KEY}" \
+      -d "${payload}")"
+
+    if [[ "${status}" != "429" || "${attempt}" -ge "${MAX_RETRIES}" ]]; then
+      printf "%s" "${status}"
+      return 0
+    fi
+
+    echo "${label}: HTTP 429 rate-limited; retrying in ${backoff}s (attempt ${attempt}/${MAX_RETRIES})" >&2
+    sleep "${backoff}"
+    attempt=$((attempt + 1))
+    backoff=$((backoff * 2))
+  done
+}
+
+status="$(post_with_retry "${base_payload}" "${tmp_body}" "AOAI base liveness")"
+
+if [[ "${status}" == "429" ]]; then
+  echo "AOAI base liveness: inconclusive after retries (HTTP 429 rate-limited)." >&2
+  cat "${tmp_body}" >&2
+  exit 0
+fi
 
 if [[ "${status}" -lt 200 || "${status}" -ge 300 ]]; then
   echo "AOAI base liveness failed (HTTP ${status})." >&2
@@ -111,14 +152,15 @@ encrypted_payload="$(cat <<EOF
 EOF
 )"
 
-probe_status="$(curl -sS -m "${TIMEOUT_SECONDS}" -o "${tmp_probe}" -w "%{http_code}" \
-  -X POST "${ENDPOINT}/openai/v1/responses" \
-  -H "Content-Type: application/json" \
-  -H "api-key: ${API_KEY}" \
-  -d "${encrypted_payload}")"
+probe_status="$(post_with_retry "${encrypted_payload}" "${tmp_probe}" "AOAI encrypted probe")"
 
 if [[ "${probe_status}" -ge 200 && "${probe_status}" -lt 300 ]]; then
   echo "AOAI encrypted-content probe: supported"
+  exit 0
+fi
+
+if [[ "${probe_status}" == "429" ]]; then
+  echo "AOAI encrypted-content probe: skipped after repeated rate limiting (HTTP 429)." >&2
   exit 0
 fi
 
