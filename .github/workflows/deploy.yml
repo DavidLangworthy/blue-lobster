@@ -166,8 +166,8 @@ jobs:
           fi
 
           if [ "${has_latest_image}" = "true" ]; then
-            echo "Custom image already exists in ACR; running standard azd up"
-            azd up --no-prompt
+            echo "Custom image already exists in ACR; running azd provision (no rebuild)"
+            azd provision --no-prompt
           else
             echo "Bootstrap path: provisioning with official image first"
             azd env set USE_OFFICIAL_IMAGE "true"
