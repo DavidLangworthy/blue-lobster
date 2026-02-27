@@ -27,30 +27,48 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' = {
   }
 }
 
-// Create file share for ClawdBot workspace
+// Create file shares for OpenClaw persistent state.
 resource fileService 'Microsoft.Storage/storageAccounts/fileServices@2023-01-01' = {
   parent: storageAccount
   name: 'default'
 }
 
-resource clawdbotShare 'Microsoft.Storage/storageAccounts/fileServices/shares@2023-01-01' = {
+resource openclawHomeShare 'Microsoft.Storage/storageAccounts/fileServices/shares@2023-01-01' = {
   parent: fileService
-  name: 'clawdbot-workspace'
+  name: 'openclaw-home'
   properties: {
     shareQuota: 5
     accessTier: 'TransactionOptimized'
   }
 }
 
-// Create blob container for credentials backup
+resource openclawWorkspaceShare 'Microsoft.Storage/storageAccounts/fileServices/shares@2023-01-01' = {
+  parent: fileService
+  name: 'openclaw-workspace'
+  properties: {
+    shareQuota: 10
+    accessTier: 'TransactionOptimized'
+  }
+}
+
+resource openclawMediaShare 'Microsoft.Storage/storageAccounts/fileServices/shares@2023-01-01' = {
+  parent: fileService
+  name: 'openclaw-media'
+  properties: {
+    shareQuota: 20
+    accessTier: 'TransactionOptimized'
+  }
+}
+
+// Create blob container for optional exported artifacts.
 resource blobService 'Microsoft.Storage/storageAccounts/blobServices@2023-01-01' = {
   parent: storageAccount
   name: 'default'
 }
 
-resource credentialsContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-01-01' = {
+resource artifactsContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-01-01' = {
   parent: blobService
-  name: 'clawdbot-credentials'
+  name: 'openclaw-artifacts'
   properties: {
     publicAccess: 'None'
   }
@@ -59,4 +77,6 @@ resource credentialsContainer 'Microsoft.Storage/storageAccounts/blobServices/co
 output id string = storageAccount.id
 output name string = storageAccount.name
 output primaryEndpoints object = storageAccount.properties.primaryEndpoints
-output fileShareName string = clawdbotShare.name
+output homeShareName string = openclawHomeShare.name
+output workspaceShareName string = openclawWorkspaceShare.name
+output mediaShareName string = openclawMediaShare.name

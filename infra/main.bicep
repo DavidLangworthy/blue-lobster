@@ -9,46 +9,72 @@ param environmentName string
 @description('Primary location for all resources')
 param location string
 
-@description('Anthropic API key for Claude models (optional if using OpenRouter)')
+@description('Azure OpenAI endpoint (for example: https://my-aoai.openai.azure.com)')
+param azureOpenAiEndpoint string = ''
+
+@description('Azure OpenAI API key')
+@secure()
+param azureOpenAiApiKey string = ''
+
+@description('Azure OpenAI deployment name')
+param azureOpenAiDeployment string = 'gpt-5-2'
+
+@description('Anthropic API key for optional fallback model routing')
 @secure()
 param anthropicApiKey string = ''
 
-@description('OpenRouter API key (alternative to Anthropic)')
+@description('Gateway token for web UI authentication')
 @secure()
-param openRouterApiKey string = ''
+param openclawGatewayToken string = ''
 
-@description('OpenAI API key for fallback models (optional)')
+@description('OpenClaw persona name')
+param openclawPersonaName string = 'Clawd'
+
+@description('Optional explicit primary model (provider/model). If empty, runtime defaults are used.')
+param openclawModel string = ''
+
+@description('Comma-separated fallback models (provider/model)')
+param openclawModelFallbacks string = 'anthropic/claude-sonnet-4-6'
+
+@description('Comma-separated room slugs used to scaffold persistent canvas rooms')
+param openclawRooms string = 'living-room,master-bedroom'
+
+@description('Comma-separated WhatsApp allowlist numbers in E.164 format')
+param whatsappAllowFrom string = ''
+
+@description('Outlook mailbox address used by the agent for vendor communication')
+param outlookEmail string = ''
+
+@description('Outlook app password for IMAP/SMTP auth')
 @secure()
-param openaiApiKey string = ''
+param outlookAppPassword string = ''
 
-@description('Telegram Bot Token for messaging (optional)')
+@description('IMAP host')
+param imapHost string = 'outlook.office365.com'
+
+@description('IMAP port')
+param imapPort string = '993'
+
+@description('SMTP host')
+param smtpHost string = 'smtp.office365.com'
+
+@description('SMTP port')
+param smtpPort string = '587'
+
+@description('Azure Speech key for voice note transcription')
 @secure()
-param telegramBotToken string = ''
+param azureSpeechKey string = ''
 
-@description('Telegram User ID for allowlist (optional)')
-param telegramAllowedUserId string = ''
+@description('Azure Speech region for voice note transcription')
+param azureSpeechRegion string = ''
 
-@description('Discord Bot Token for messaging (optional)')
-@secure()
-param discordBotToken string = ''
-
-@description('Discord User IDs allowed to DM the bot (comma-separated, e.g., "123456789,987654321")')
-param discordAllowedUsers string = ''
-
-@description('ClawdBot Gateway Token for web UI authentication (will be auto-generated if not provided)')
-@secure()
-param clawdbotGatewayToken string = ''
-
-@description('ClawdBot persona name (default: Clawd)')
-param clawdbotPersonaName string = 'Clawd'
-
-@description('The model to use - must use exact OpenRouter model ID (e.g., openrouter/anthropic/claude-3.5-sonnet)')
-param clawdbotModel string = 'openrouter/anthropic/claude-3.5-sonnet'
+@description('Azure Speech language for voice note transcription')
+param azureSpeechLanguage string = 'en-US'
 
 @description('Container image tag (default: latest for ACR-built image)')
 param imageTag string = 'latest'
 
-@description('Use official GHCR image (requires building from source first - see scripts/build-image.ps1)')
+@description('Use official GHCR image (requires building from source first)')
 param useOfficialImage bool = false
 
 @description('Container CPU cores')
@@ -57,13 +83,13 @@ param containerCpu string = '1.0'
 @description('Container memory in Gi')
 param containerMemory string = '2.0Gi'
 
-@description('Minimum number of replicas')
-param minReplicas int = 1
+@description('Minimum number of replicas (set to 0 for scale-to-zero)')
+param minReplicas int = 0
 
 @description('Maximum number of replicas')
-param maxReplicas int = 1
+param maxReplicas int = 2
 
-@description('IP addresses allowed to access the gateway (comma-separated CIDR blocks, e.g., "1.2.3.4/32,10.0.0.0/8"). Leave empty for public access.')
+@description('IP addresses allowed to access the gateway (comma-separated CIDR blocks). Leave empty for public access.')
 param allowedIpRanges string = ''
 
 @description('Enable internal-only ingress (requires VNet-integrated environment)')
@@ -75,19 +101,16 @@ param enableAlerts bool = true
 @description('Email address for alert notifications (leave empty to disable email alerts)')
 param alertEmailAddress string = ''
 
-// Generate unique suffix for resources
 var abbrs = loadJsonContent('./abbreviations.json')
 var resourceToken = toLower(uniqueString(subscription().id, environmentName, location))
 var tags = { 'azd-env-name': environmentName }
 
-// Resource Group
 resource rg 'Microsoft.Resources/resourceGroups@2022-09-01' = {
   name: '${abbrs.resourcesResourceGroups}${environmentName}'
   location: location
   tags: tags
 }
 
-// Log Analytics Workspace for monitoring
 module logAnalytics './modules/log-analytics.bicep' = {
   name: 'log-analytics'
   scope: rg
@@ -98,7 +121,6 @@ module logAnalytics './modules/log-analytics.bicep' = {
   }
 }
 
-// Azure Container Registry for images
 module containerRegistry './modules/container-registry.bicep' = {
   name: 'container-registry'
   scope: rg
@@ -109,7 +131,6 @@ module containerRegistry './modules/container-registry.bicep' = {
   }
 }
 
-// Storage Account for ClawdBot persistent data
 module storageAccount './modules/storage-account.bicep' = {
   name: 'storage-account'
   scope: rg
@@ -120,7 +141,6 @@ module storageAccount './modules/storage-account.bicep' = {
   }
 }
 
-// Container Apps Environment
 module containerAppsEnvironment './modules/container-apps-env.bicep' = {
   name: 'container-apps-env'
   scope: rg
@@ -133,30 +153,42 @@ module containerAppsEnvironment './modules/container-apps-env.bicep' = {
   }
 }
 
-// ClawdBot Container App
-module clawdbotApp './modules/clawdbot-app.bicep' = {
-  name: 'clawdbot-app'
+module openclawApp './modules/clawdbot-app.bicep' = {
+  name: 'openclaw-app'
   scope: rg
   params: {
-    name: 'clawdbot'
+    name: 'openclaw'
     location: location
     tags: tags
     containerAppsEnvironmentId: containerAppsEnvironment.outputs.id
+    containerAppsEnvironmentName: containerAppsEnvironment.outputs.name
     containerRegistryName: containerRegistry.outputs.name
     containerRegistryLoginServer: containerRegistry.outputs.loginServer
     storageAccountName: storageAccount.outputs.name
+    homeShareName: storageAccount.outputs.homeShareName
+    workspaceShareName: storageAccount.outputs.workspaceShareName
+    mediaShareName: storageAccount.outputs.mediaShareName
     imageTag: imageTag
     useOfficialImage: useOfficialImage
+    azureOpenAiEndpoint: azureOpenAiEndpoint
+    azureOpenAiApiKey: azureOpenAiApiKey
+    azureOpenAiDeployment: azureOpenAiDeployment
     anthropicApiKey: anthropicApiKey
-    openRouterApiKey: openRouterApiKey
-    openaiApiKey: openaiApiKey
-    telegramBotToken: telegramBotToken
-    telegramAllowedUserId: telegramAllowedUserId
-    discordBotToken: discordBotToken
-    discordAllowedUsers: discordAllowedUsers
-    clawdbotGatewayToken: clawdbotGatewayToken
-    clawdbotPersonaName: clawdbotPersonaName
-    clawdbotModel: clawdbotModel
+    openclawGatewayToken: openclawGatewayToken
+    openclawPersonaName: openclawPersonaName
+    openclawModel: openclawModel
+    openclawModelFallbacks: openclawModelFallbacks
+    openclawRooms: openclawRooms
+    whatsappAllowFrom: whatsappAllowFrom
+    outlookEmail: outlookEmail
+    outlookAppPassword: outlookAppPassword
+    imapHost: imapHost
+    imapPort: imapPort
+    smtpHost: smtpHost
+    smtpPort: smtpPort
+    azureSpeechKey: azureSpeechKey
+    azureSpeechRegion: azureSpeechRegion
+    azureSpeechLanguage: azureSpeechLanguage
     containerCpu: containerCpu
     containerMemory: containerMemory
     minReplicas: minReplicas
@@ -166,25 +198,23 @@ module clawdbotApp './modules/clawdbot-app.bicep' = {
   }
 }
 
-// Security and availability alerts
 module alerts './modules/alerts.bicep' = if (enableAlerts) {
   name: 'alerts'
   scope: rg
   params: {
-    namePrefix: 'clawdbot'
+    namePrefix: 'openclaw'
     location: location
     tags: tags
     logAnalyticsWorkspaceId: logAnalytics.outputs.id
-    containerAppName: 'clawdbot'
+    containerAppName: 'openclaw'
     enableAlerts: enableAlerts
     alertEmailAddress: alertEmailAddress
   }
   dependsOn: [
-    clawdbotApp
+    openclawApp
   ]
 }
 
-// Outputs
 output AZURE_LOCATION string = location
 output AZURE_TENANT_ID string = subscription().tenantId
 output AZURE_SUBSCRIPTION_ID string = subscription().subscriptionId
@@ -193,9 +223,14 @@ output AZURE_RESOURCE_GROUP string = rg.name
 output CONTAINER_REGISTRY_NAME string = containerRegistry.outputs.name
 output CONTAINER_REGISTRY_LOGIN_SERVER string = containerRegistry.outputs.loginServer
 
-output CLAWDBOT_APP_NAME string = clawdbotApp.outputs.name
-output CLAWDBOT_APP_FQDN string = clawdbotApp.outputs.fqdn
-output CLAWDBOT_GATEWAY_URL string = 'https://${clawdbotApp.outputs.fqdn}'
+output OPENCLAW_APP_NAME string = openclawApp.outputs.name
+output OPENCLAW_APP_FQDN string = openclawApp.outputs.fqdn
+output OPENCLAW_GATEWAY_URL string = 'https://${openclawApp.outputs.fqdn}'
+
+// Backward-compatible output aliases used by existing scripts.
+output CLAWDBOT_APP_NAME string = openclawApp.outputs.name
+output CLAWDBOT_APP_FQDN string = openclawApp.outputs.fqdn
+output CLAWDBOT_GATEWAY_URL string = 'https://${openclawApp.outputs.fqdn}'
 
 output LOG_ANALYTICS_WORKSPACE_ID string = logAnalytics.outputs.id
 output STORAGE_ACCOUNT_NAME string = storageAccount.outputs.name

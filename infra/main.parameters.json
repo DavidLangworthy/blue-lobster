@@ -8,35 +8,62 @@
     "location": {
       "value": "${AZURE_LOCATION}"
     },
+    "azureOpenAiEndpoint": {
+      "value": "${AZURE_OPENAI_ENDPOINT}"
+    },
+    "azureOpenAiApiKey": {
+      "value": "${AZURE_OPENAI_API_KEY}"
+    },
+    "azureOpenAiDeployment": {
+      "value": "${AZURE_OPENAI_DEPLOYMENT=gpt-5-2}"
+    },
     "anthropicApiKey": {
       "value": "${ANTHROPIC_API_KEY}"
     },
-    "openRouterApiKey": {
-      "value": "${OPENROUTER_API_KEY}"
+    "openclawGatewayToken": {
+      "value": "${OPENCLAW_GATEWAY_TOKEN}"
     },
-    "openaiApiKey": {
-      "value": "${OPENAI_API_KEY}"
+    "openclawPersonaName": {
+      "value": "${OPENCLAW_PERSONA_NAME=Clawd}"
     },
-    "telegramBotToken": {
-      "value": "${TELEGRAM_BOT_TOKEN}"
+    "openclawModel": {
+      "value": "${OPENCLAW_MODEL}"
     },
-    "telegramAllowedUserId": {
-      "value": "${TELEGRAM_ALLOWED_USER_ID}"
+    "openclawModelFallbacks": {
+      "value": "${OPENCLAW_MODEL_FALLBACKS=anthropic/claude-sonnet-4-6}"
     },
-    "discordBotToken": {
-      "value": "${DISCORD_BOT_TOKEN}"
+    "openclawRooms": {
+      "value": "${OPENCLAW_ROOMS=living-room,master-bedroom}"
     },
-    "discordAllowedUsers": {
-      "value": "${DISCORD_ALLOWED_USERS}"
+    "whatsappAllowFrom": {
+      "value": "${WHATSAPP_ALLOW_FROM}"
     },
-    "clawdbotGatewayToken": {
-      "value": "${CLAWDBOT_GATEWAY_TOKEN}"
+    "outlookEmail": {
+      "value": "${OUTLOOK_EMAIL}"
     },
-    "clawdbotPersonaName": {
-      "value": "${CLAWDBOT_PERSONA_NAME=Clawd}"
+    "outlookAppPassword": {
+      "value": "${OUTLOOK_APP_PASSWORD}"
     },
-    "clawdbotModel": {
-      "value": "${CLAWDBOT_MODEL=openrouter/anthropic/claude-3.5-sonnet}"
+    "imapHost": {
+      "value": "${IMAP_HOST=outlook.office365.com}"
+    },
+    "imapPort": {
+      "value": "${IMAP_PORT=993}"
+    },
+    "smtpHost": {
+      "value": "${SMTP_HOST=smtp.office365.com}"
+    },
+    "smtpPort": {
+      "value": "${SMTP_PORT=587}"
+    },
+    "azureSpeechKey": {
+      "value": "${AZURE_SPEECH_KEY}"
+    },
+    "azureSpeechRegion": {
+      "value": "${AZURE_SPEECH_REGION}"
+    },
+    "azureSpeechLanguage": {
+      "value": "${AZURE_SPEECH_LANGUAGE=en-US}"
     },
     "allowedIpRanges": {
       "value": "${ALLOWED_IP_RANGES}"
