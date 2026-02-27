@@ -11,7 +11,7 @@ Options:
   --repo <owner/repo>               GitHub repo (default: inferred from origin remote)
   --branch <name>                   Git branch for OIDC subject (default: main)
   --app-name <name>                 Entra app display name (default: blue-lobster-github-oidc)
-  --role <role>                     Azure role for workflow identity (default: Contributor)
+  --role <role>                     Primary Azure role for workflow identity (default: Contributor)
   --scope <azure-scope>             Role assignment scope (default: subscription)
   --azd-env-name <name>             GitHub variable AZD_ENV_NAME (default: openclaw-prod)
   --azure-location <location>       GitHub variable AZURE_LOCATION (default: eastus2)
@@ -87,6 +87,7 @@ REPO=""
 BRANCH="main"
 APP_NAME="blue-lobster-github-oidc"
 ROLE="Contributor"
+RBAC_ADMIN_ROLE="User Access Administrator"
 SCOPE=""
 AZD_ENV_NAME="openclaw-prod"
 AZURE_LOCATION="eastus2"
@@ -196,25 +197,33 @@ else
   run_cmd az ad app federated-credential create --id "${APP_OBJECT_ID}" --parameters "@${FED_FILE}" >/dev/null
 fi
 
-ROLE_ASSIGNMENT_ID="$(
-  az role assignment list \
-    --assignee-object-id "${SP_OBJECT_ID}" \
-    --scope "${SCOPE}" \
-    --role "${ROLE}" \
-    --query "[0].id" \
-    -o tsv
-)"
+ensure_role_assignment() {
+  local role_name="$1"
+  local assignment_id
 
-if [[ -z "${ROLE_ASSIGNMENT_ID}" ]]; then
-  echo "Creating role assignment: ${ROLE}"
-  run_cmd az role assignment create \
-    --assignee-object-id "${SP_OBJECT_ID}" \
-    --assignee-principal-type ServicePrincipal \
-    --role "${ROLE}" \
-    --scope "${SCOPE}" >/dev/null
-else
-  echo "Role assignment already exists: ${ROLE_ASSIGNMENT_ID}"
-fi
+  assignment_id="$(
+    az role assignment list \
+      --assignee-object-id "${SP_OBJECT_ID}" \
+      --scope "${SCOPE}" \
+      --role "${role_name}" \
+      --query "[0].id" \
+      -o tsv
+  )"
+
+  if [[ -z "${assignment_id}" ]]; then
+    echo "Creating role assignment: ${role_name}"
+    run_cmd az role assignment create \
+      --assignee-object-id "${SP_OBJECT_ID}" \
+      --assignee-principal-type ServicePrincipal \
+      --role "${role_name}" \
+      --scope "${SCOPE}" >/dev/null
+  else
+    echo "Role assignment already exists for '${role_name}': ${assignment_id}"
+  fi
+}
+
+ensure_role_assignment "${ROLE}"
+ensure_role_assignment "${RBAC_ADMIN_ROLE}"
 
 if [[ -z "${OPENCLAW_GATEWAY_TOKEN}" ]]; then
   OPENCLAW_GATEWAY_TOKEN="$(openssl rand -hex 24)"

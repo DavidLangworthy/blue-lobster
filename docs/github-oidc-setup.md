@@ -18,7 +18,7 @@ What it configures:
 
 - Entra app + service principal
 - Federated credential (`repo:...:ref:refs/heads/main`)
-- Azure role assignment (Contributor by default)
+- Azure role assignments (`Contributor` + `User Access Administrator` by default)
 - GitHub secrets and variables required by `.github/workflows/deploy.yml`
 
 Optional flags:
