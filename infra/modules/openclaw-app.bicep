@@ -67,8 +67,20 @@ param openclawModelFallbacks string = 'anthropic/claude-sonnet-4-6'
 @description('Comma-separated room slugs for per-room agent scaffolding')
 param openclawRooms string = 'living-room,master-bedroom'
 
+@description('TTS provider for outbound voice replies')
+param openclawTtsProvider string = 'edge'
+
+@description('Auto TTS mode (off, inbound, always)')
+param openclawTtsAuto string = 'inbound'
+
 @description('Comma-separated WhatsApp allowlist numbers in E.164 format')
 param whatsappAllowFrom string = ''
+
+@description('WhatsApp DM policy override (allowlist, pairing, disabled)')
+param whatsappDmPolicy string = ''
+
+@description('WhatsApp group policy override (allowlist, pairing, disabled)')
+param whatsappGroupPolicy string = ''
 
 @description('Outlook mailbox address used by the agent')
 param outlookEmail string = ''
@@ -98,6 +110,10 @@ param azureSpeechRegion string = ''
 
 @description('Azure Speech language for voice note transcription')
 param azureSpeechLanguage string = 'en-US'
+
+@description('ElevenLabs API key for premium TTS voice replies')
+@secure()
+param elevenLabsApiKey string = ''
 
 @description('Container CPU cores')
 param containerCpu string = '1.0'
@@ -263,6 +279,10 @@ resource containerApp 'Microsoft.App/containerApps@2023-05-01' = {
           name: 'azure-speech-key'
           value: !empty(azureSpeechKey) ? azureSpeechKey : 'not-set'
         }
+        {
+          name: 'elevenlabs-api-key'
+          value: !empty(elevenLabsApiKey) ? elevenLabsApiKey : 'not-set'
+        }
       ]
     }
     template: {
@@ -312,8 +332,24 @@ resource containerApp 'Microsoft.App/containerApps@2023-05-01' = {
               value: openclawRooms
             }
             {
+              name: 'OPENCLAW_TTS_PROVIDER'
+              value: openclawTtsProvider
+            }
+            {
+              name: 'OPENCLAW_TTS_AUTO'
+              value: openclawTtsAuto
+            }
+            {
               name: 'WHATSAPP_ALLOW_FROM'
               value: whatsappAllowFrom
+            }
+            {
+              name: 'WHATSAPP_DM_POLICY'
+              value: whatsappDmPolicy
+            }
+            {
+              name: 'WHATSAPP_GROUP_POLICY'
+              value: whatsappGroupPolicy
             }
             {
               name: 'OUTLOOK_EMAIL'
@@ -350,6 +386,10 @@ resource containerApp 'Microsoft.App/containerApps@2023-05-01' = {
             {
               name: 'AZURE_SPEECH_LANGUAGE'
               value: azureSpeechLanguage
+            }
+            {
+              name: 'ELEVENLABS_API_KEY'
+              secretRef: 'elevenlabs-api-key'
             }
             {
               name: 'OPENCLAW_WORKSPACE'

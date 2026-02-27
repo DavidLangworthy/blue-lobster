@@ -41,8 +41,17 @@ const workspace = env.OPENCLAW_WORKSPACE || "/workspace";
 const allowFrom = splitCsv(env.WHATSAPP_ALLOW_FROM);
 const rooms = splitCsv(env.OPENCLAW_ROOMS || "living-room,master-bedroom");
 const fallbackModels = splitCsv(env.OPENCLAW_MODEL_FALLBACKS || "anthropic/claude-sonnet-4-6");
+const azureOpenAiEndpoint = (env.AZURE_OPENAI_ENDPOINT || "").trim().replace(/\/+$/, "");
+const azureOpenAiDeployment = (env.AZURE_OPENAI_DEPLOYMENT || "gpt-5-2").trim();
+const explicitModel = (env.OPENCLAW_MODEL || "").trim();
+const hasAllowFrom = allowFrom.length > 0;
+const whatsappDmPolicy = (env.WHATSAPP_DM_POLICY || (hasAllowFrom ? "allowlist" : "pairing")).trim();
+const whatsappGroupPolicy = (env.WHATSAPP_GROUP_POLICY || (hasAllowFrom ? "allowlist" : "disabled")).trim();
 
-const defaultAllow = allowFrom.length > 0 ? allowFrom : ["+15550000000"];
+const defaultAllow = hasAllowFrom ? allowFrom : [];
+const primaryModel =
+  explicitModel || (azureOpenAiEndpoint ? `azure-openai/${azureOpenAiDeployment}` : "openai/gpt-5.2");
+
 const roomAgents = rooms
   .map((r) => ({ id: slugify(r), name: titleCase(r) }))
   .filter((r) => r.id && r.id !== "main")
@@ -66,7 +75,7 @@ const config = {
     defaults: {
       workspace,
       model: {
-        primary: env.OPENCLAW_MODEL || "openai/gpt-5.2",
+        primary: primaryModel,
         fallbacks: fallbackModels,
       },
       heartbeat: {
@@ -89,9 +98,9 @@ const config = {
   },
   channels: {
     whatsapp: {
-      dmPolicy: "allowlist",
+      dmPolicy: whatsappDmPolicy,
       allowFrom: defaultAllow,
-      groupPolicy: "allowlist",
+      groupPolicy: whatsappGroupPolicy,
       groupAllowFrom: defaultAllow,
       groups: {
         "*": {
@@ -192,6 +201,27 @@ const config = {
     consoleStyle: "pretty",
   },
 };
+
+if (azureOpenAiEndpoint) {
+  config.models = {
+    mode: "merge",
+    providers: {
+      "azure-openai": {
+        baseUrl: `${azureOpenAiEndpoint}/openai/v1`,
+        apiKey: "${AZURE_OPENAI_API_KEY}",
+        api: "openai-responses",
+        models: [
+          {
+            id: azureOpenAiDeployment,
+            name: `Azure ${azureOpenAiDeployment}`,
+            reasoning: true,
+            input: ["text", "image"],
+          },
+        ],
+      },
+    },
+  };
+}
 
 process.stdout.write(`${JSON.stringify(config, null, 2)}\n`);
 NODE

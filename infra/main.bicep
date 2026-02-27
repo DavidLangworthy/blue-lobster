@@ -39,8 +39,20 @@ param openclawModelFallbacks string = 'anthropic/claude-sonnet-4-6'
 @description('Comma-separated room slugs used to scaffold persistent canvas rooms')
 param openclawRooms string = 'living-room,master-bedroom'
 
+@description('TTS provider for outbound voice replies (edge or elevenlabs)')
+param openclawTtsProvider string = 'edge'
+
+@description('Auto TTS mode (off, inbound, always)')
+param openclawTtsAuto string = 'inbound'
+
 @description('Comma-separated WhatsApp allowlist numbers in E.164 format')
 param whatsappAllowFrom string = ''
+
+@description('WhatsApp DM policy override (allowlist, pairing, disabled). Empty uses runtime default.')
+param whatsappDmPolicy string = ''
+
+@description('WhatsApp group policy override (allowlist, pairing, disabled). Empty uses runtime default.')
+param whatsappGroupPolicy string = ''
 
 @description('Outlook mailbox address used by the agent for vendor communication')
 param outlookEmail string = ''
@@ -70,6 +82,10 @@ param azureSpeechRegion string = ''
 
 @description('Azure Speech language for voice note transcription')
 param azureSpeechLanguage string = 'en-US'
+
+@description('ElevenLabs API key for premium TTS voice replies (optional)')
+@secure()
+param elevenLabsApiKey string = ''
 
 @description('Container image tag (default: latest for ACR-built image)')
 param imageTag string = 'latest'
@@ -153,7 +169,7 @@ module containerAppsEnvironment './modules/container-apps-env.bicep' = {
   }
 }
 
-module openclawApp './modules/clawdbot-app.bicep' = {
+module openclawApp './modules/openclaw-app.bicep' = {
   name: 'openclaw-app'
   scope: rg
   params: {
@@ -179,7 +195,11 @@ module openclawApp './modules/clawdbot-app.bicep' = {
     openclawModel: openclawModel
     openclawModelFallbacks: openclawModelFallbacks
     openclawRooms: openclawRooms
+    openclawTtsProvider: openclawTtsProvider
+    openclawTtsAuto: openclawTtsAuto
     whatsappAllowFrom: whatsappAllowFrom
+    whatsappDmPolicy: whatsappDmPolicy
+    whatsappGroupPolicy: whatsappGroupPolicy
     outlookEmail: outlookEmail
     outlookAppPassword: outlookAppPassword
     imapHost: imapHost
@@ -189,6 +209,7 @@ module openclawApp './modules/clawdbot-app.bicep' = {
     azureSpeechKey: azureSpeechKey
     azureSpeechRegion: azureSpeechRegion
     azureSpeechLanguage: azureSpeechLanguage
+    elevenLabsApiKey: elevenLabsApiKey
     containerCpu: containerCpu
     containerMemory: containerMemory
     minReplicas: minReplicas

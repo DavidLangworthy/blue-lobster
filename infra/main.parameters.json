@@ -35,8 +35,20 @@
     "openclawRooms": {
       "value": "${OPENCLAW_ROOMS=living-room,master-bedroom}"
     },
+    "openclawTtsProvider": {
+      "value": "${OPENCLAW_TTS_PROVIDER=edge}"
+    },
+    "openclawTtsAuto": {
+      "value": "${OPENCLAW_TTS_AUTO=inbound}"
+    },
     "whatsappAllowFrom": {
       "value": "${WHATSAPP_ALLOW_FROM}"
+    },
+    "whatsappDmPolicy": {
+      "value": "${WHATSAPP_DM_POLICY}"
+    },
+    "whatsappGroupPolicy": {
+      "value": "${WHATSAPP_GROUP_POLICY}"
     },
     "outlookEmail": {
       "value": "${OUTLOOK_EMAIL}"
@@ -64,6 +76,9 @@
     },
     "azureSpeechLanguage": {
       "value": "${AZURE_SPEECH_LANGUAGE=en-US}"
+    },
+    "elevenLabsApiKey": {
+      "value": "${ELEVENLABS_API_KEY}"
     },
     "allowedIpRanges": {
       "value": "${ALLOWED_IP_RANGES}"

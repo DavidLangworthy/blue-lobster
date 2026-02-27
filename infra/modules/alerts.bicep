@@ -25,7 +25,7 @@ resource actionGroup 'Microsoft.Insights/actionGroups@2023-01-01' = if (!empty(a
   location: 'global'
   tags: tags
   properties: {
-    groupShortName: 'ClawdAlerts'
+    groupShortName: 'OClwAlerts'
     enabled: true
     emailReceivers: [
       {
@@ -43,7 +43,7 @@ resource errorRateAlert 'Microsoft.Insights/scheduledQueryRules@2023-03-15-previ
   location: location
   tags: tags
   properties: {
-    displayName: 'ClawdBot - High Error Rate'
+    displayName: 'OpenClaw - High Error Rate'
     description: 'Triggered when error rate exceeds threshold - may indicate auth failures, API key issues, or attacks'
     severity: 2
     enabled: true
@@ -78,7 +78,7 @@ resource restartAlert 'Microsoft.Insights/scheduledQueryRules@2023-03-15-preview
   location: location
   tags: tags
   properties: {
-    displayName: 'ClawdBot - Container Restarts'
+    displayName: 'OpenClaw - Container Restarts'
     description: 'Triggered when container restarts unexpectedly - may indicate crash, OOM, or attack'
     severity: 2
     enabled: true
@@ -113,7 +113,7 @@ resource unusualActivityAlert 'Microsoft.Insights/scheduledQueryRules@2023-03-15
   location: location
   tags: tags
   properties: {
-    displayName: 'ClawdBot - Unusual Request Volume'
+    displayName: 'OpenClaw - Unusual Request Volume'
     description: 'Triggered when request volume exceeds normal patterns - may indicate abuse or attack'
     severity: 3
     enabled: true
@@ -125,7 +125,7 @@ resource unusualActivityAlert 'Microsoft.Insights/scheduledQueryRules@2023-03-15
     criteria: {
       allOf: [
         {
-          query: 'ContainerAppConsoleLogs_CL | where ContainerAppName_s == "${containerAppName}" | where Log_s contains "received message" or Log_s contains "[discord]" or Log_s contains "[telegram]" | summarize MessageCount = count() by bin(TimeGenerated, 1h) | where MessageCount > 100'
+          query: 'ContainerAppConsoleLogs_CL | where ContainerAppName_s == "${containerAppName}" | where Log_s contains "received message" or Log_s contains "[whatsapp]" or Log_s contains "whatsapp" | summarize MessageCount = count() by bin(TimeGenerated, 1h) | where MessageCount > 100'
           timeAggregation: 'Count'
           operator: 'GreaterThan'
           threshold: 0
@@ -142,14 +142,14 @@ resource unusualActivityAlert 'Microsoft.Insights/scheduledQueryRules@2023-03-15
   }
 }
 
-// Alert: Discord channel disconnect (bot may be offline)
+// Alert: channel disconnect (gateway may be partially offline)
 resource disconnectAlert 'Microsoft.Insights/scheduledQueryRules@2023-03-15-preview' = if (enableAlerts) {
   name: '${namePrefix}-channel-disconnect'
   location: location
   tags: tags
   properties: {
-    displayName: 'ClawdBot - Channel Disconnected'
-    description: 'Triggered when Discord or Telegram channel disconnects unexpectedly'
+    displayName: 'OpenClaw - Channel Disconnected'
+    description: 'Triggered when a channel disconnect is detected unexpectedly'
     severity: 2
     enabled: true
     evaluationFrequency: 'PT5M'
