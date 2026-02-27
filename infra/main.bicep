@@ -108,6 +108,12 @@ param minReplicas int = 0
 @description('Maximum number of replicas')
 param maxReplicas int = 2
 
+@description('Scale polling interval in seconds')
+param scalePollingIntervalSeconds int = 30
+
+@description('Scale cooldown period in seconds before scaling to zero after idle')
+param scaleCooldownSeconds int = 3600
+
 @description('Cron start expression for periodic wake windows')
 param heartbeatCronStart string = '0 8-20 * * *'
 
@@ -235,6 +241,8 @@ module openclawApp './modules/openclaw-app.bicep' = {
     containerMemory: containerMemory
     minReplicas: minReplicas
     maxReplicas: maxReplicas
+    scalePollingIntervalSeconds: scalePollingIntervalSeconds
+    scaleCooldownSeconds: scaleCooldownSeconds
     heartbeatCronStart: heartbeatCronStart
     heartbeatCronEnd: heartbeatCronEnd
     heartbeatCronTimezone: heartbeatCronTimezone

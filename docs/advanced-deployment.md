@@ -17,6 +17,7 @@ Runtime layout:
 - OpenClaw gateway runs in ACA
 - `minReplicas=0` for scale-to-zero
 - Cron scale rule wakes hourly from 8:00 AM to 8:00 PM Pacific
+- Idle scale cooldown is set to 3600 seconds, so a web hit keeps the app warm for about 1 hour
 - Persistent mounts:
   - `/home/node/.openclaw` (sessions/tokens/config)
   - `/workspace` (prompt, ledgers, room state)

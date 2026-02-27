@@ -127,6 +127,12 @@ param minReplicas int = 0
 @description('Maximum number of replicas')
 param maxReplicas int = 2
 
+@description('Scale polling interval in seconds')
+param scalePollingIntervalSeconds int = 30
+
+@description('Scale cooldown period in seconds before scaling to zero after idle')
+param scaleCooldownSeconds int = 3600
+
 @description('Cron start expression for periodic wake windows')
 param heartbeatCronStart string = '0 8-20 * * *'
 
@@ -226,7 +232,7 @@ var ipSecurityRestrictions = [for (ipRange, i) in ipRangesArray: {
   ipAddressRange: trim(ipRange)
 }]
 
-resource containerApp 'Microsoft.App/containerApps@2023-05-01' = {
+resource containerApp 'Microsoft.App/containerApps@2025-01-01' = {
   name: name
   location: location
   tags: tags
@@ -466,6 +472,8 @@ resource containerApp 'Microsoft.App/containerApps@2023-05-01' = {
       scale: {
         minReplicas: minReplicas
         maxReplicas: maxReplicas
+        pollingInterval: scalePollingIntervalSeconds
+        cooldownPeriod: scaleCooldownSeconds
         rules: [
           {
             name: 'http-concurrency'
