@@ -1,95 +1,201 @@
 #!/bin/bash
-# MoltBot Azure Container Apps Entrypoint
-# Generates configuration from environment variables and starts the gateway
+# OpenClaw Azure Container Apps entrypoint.
+# Generates config from environment, initializes workspace, then starts gateway.
+set -euo pipefail
 
-set -e
+CONFIG_DIR="${HOME:-/home/node}/.openclaw"
+CONFIG_FILE="${CONFIG_DIR}/openclaw.json"
 
-CONFIG_DIR="${HOME}/.moltbot"
-CONFIG_FILE="${CONFIG_DIR}/moltbot.json"
-
-# Create config directory
 mkdir -p "${CONFIG_DIR}"
 
-# Build Discord config section if token is provided
-DISCORD_CONFIG=""
-if [ -n "${DISCORD_BOT_TOKEN}" ]; then
-  # Parse comma-separated Discord user IDs into JSON array format
-  if [ -n "${DISCORD_ALLOWED_USERS}" ]; then
-    # Convert "id1,id2,id3" to ["id1","id2","id3"]
-    DISCORD_USERS_JSON=$(echo "${DISCORD_ALLOWED_USERS}" | sed 's/,/","/g' | sed 's/^/["/' | sed 's/$/"]/')
-    DISCORD_DM_CONFIG='"dm": {
-        "enabled": true,
-        "policy": "allowlist",
-        "allowFrom": '"${DISCORD_USERS_JSON}"'
-      }'
-    echo "Discord channel configured: yes (DM allowlist: ${DISCORD_ALLOWED_USERS})"
-  else
-    # No allowlist - disable DMs for security
-    DISCORD_DM_CONFIG='"dm": {
-        "enabled": false
-      }'
-    echo "Discord channel configured: yes (DMs disabled - set DISCORD_ALLOWED_USERS to enable)"
-  fi
-  DISCORD_CONFIG='"discord": {
-      "enabled": true,
-      '"${DISCORD_DM_CONFIG}"',
-      "groupPolicy": "open"
-    }'
-else
-  echo "Discord channel configured: no (DISCORD_BOT_TOKEN not set)"
-fi
+/app/init-workspace.sh
 
-# Build channels section
-CHANNELS_SECTION=""
-if [ -n "${DISCORD_CONFIG}" ]; then
-  CHANNELS_SECTION='"channels": {
-    '"${DISCORD_CONFIG}"'
-  },'
-fi
+node <<'NODE' > "${CONFIG_FILE}"
+const env = process.env;
 
-# Generate MoltBot configuration using current schema format
-cat > "${CONFIG_FILE}" << EOF
-{
-  "agents": {
-    "defaults": {
-      "workspace": "${HOME}/molt",
-      "model": {
-        "primary": "${MOLTBOT_MODEL:-openrouter/anthropic/claude-3.5-sonnet}"
-      }
-    },
-    "list": [
-      {
-        "id": "main",
-        "identity": {
-          "name": "${MOLTBOT_PERSONA_NAME:-Molt}",
-          "theme": "helpful assistant",
-          "emoji": "🦞"
-        }
-      }
-    ]
-  },
-  ${CHANNELS_SECTION}
-  "gateway": {
-    "port": ${GATEWAY_PORT:-18789},
-    "bind": "lan",
-    "controlUi": {
-      "enabled": true
-    },
-    "auth": {
-      "mode": "token",
-      "token": "${MOLTBOT_GATEWAY_TOKEN}"
-    }
-  },
-  "logging": {
-    "level": "info",
-    "consoleLevel": "info",
-    "consoleStyle": "pretty"
-  }
+function splitCsv(value) {
+  if (!value) return [];
+  return value
+    .split(",")
+    .map((v) => v.trim())
+    .filter(Boolean);
 }
-EOF
 
-echo "MoltBot configuration written to ${CONFIG_FILE}"
-echo "Gateway token configured: $([ -n "${MOLTBOT_GATEWAY_TOKEN}" ] && echo 'yes' || echo 'no')"
+function slugify(value) {
+  return String(value)
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-+|-+$)/g, "");
+}
 
-# Start MoltBot Gateway with --allow-unconfigured to allow running without messaging channels
+function titleCase(input) {
+  return String(input)
+    .split(/[-_\s]+/)
+    .filter(Boolean)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ");
+}
+
+const workspace = env.OPENCLAW_WORKSPACE || "/workspace";
+const allowFrom = splitCsv(env.WHATSAPP_ALLOW_FROM);
+const rooms = splitCsv(env.OPENCLAW_ROOMS || "living-room,master-bedroom");
+const fallbackModels = splitCsv(env.OPENCLAW_MODEL_FALLBACKS || "anthropic/claude-sonnet-4-6");
+
+const defaultAllow = allowFrom.length > 0 ? allowFrom : ["+15550000000"];
+const roomAgents = rooms
+  .map((r) => ({ id: slugify(r), name: titleCase(r) }))
+  .filter((r) => r.id && r.id !== "main")
+  .map((r) => ({
+    id: r.id,
+    identity: {
+      name: `${r.name} Assistant`,
+      theme: "interior design and procurement",
+      emoji: "🏠",
+    },
+    workspace,
+  }));
+
+const config = {
+  identity: {
+    name: env.OPENCLAW_PERSONA_NAME || "Clawd",
+    theme: "interior design and procurement assistant",
+    emoji: "🦞",
+  },
+  agents: {
+    defaults: {
+      workspace,
+      model: {
+        primary: env.OPENCLAW_MODEL || "openai/gpt-5.2",
+        fallbacks: fallbackModels,
+      },
+      heartbeat: {
+        every: env.OPENCLAW_HEARTBEAT_EVERY || "2h",
+        target: "last",
+        directPolicy: "allow",
+      },
+    },
+    list: [
+      {
+        id: "main",
+        identity: {
+          name: env.OPENCLAW_PERSONA_NAME || "Clawd",
+          theme: "interior design and procurement assistant",
+          emoji: "🦞",
+        },
+      },
+      ...roomAgents,
+    ],
+  },
+  channels: {
+    whatsapp: {
+      dmPolicy: "allowlist",
+      allowFrom: defaultAllow,
+      groupPolicy: "allowlist",
+      groupAllowFrom: defaultAllow,
+      groups: {
+        "*": {
+          requireMention: true,
+        },
+      },
+      sendReadReceipts: true,
+      textChunkLimit: 4000,
+    },
+  },
+  messages: {
+    tts: {
+      auto: env.OPENCLAW_TTS_AUTO || "inbound",
+      provider: env.OPENCLAW_TTS_PROVIDER || "edge",
+    },
+  },
+  tools: {
+    allow: [
+      "group:fs",
+      "group:runtime",
+      "group:sessions",
+      "group:memory",
+      "group:ui",
+      "group:automation",
+      "group:messaging",
+      "message",
+      "browser",
+      "canvas",
+      "cron",
+      "gateway",
+      "exec",
+      "process",
+    ],
+    deny: ["discord", "telegram"],
+    exec: {
+      ask: env.OPENCLAW_EXEC_ASK || "always",
+    },
+    elevated: {
+      enabled: true,
+      allowFrom: {
+        whatsapp: defaultAllow,
+      },
+    },
+    media: {
+      audio: {
+        enabled: true,
+        models: [
+          {
+            type: "cli",
+            command: "/app/azure-stt.sh",
+            args: ["{{MediaPath}}"],
+            timeoutSeconds: 90,
+          },
+          {
+            type: "provider",
+            provider: "openai",
+            model: "gpt-4o-mini-transcribe",
+            timeoutSeconds: 90,
+          },
+        ],
+      },
+    },
+  },
+  approvals: {
+    exec: {
+      enabled: true,
+      mode: "session",
+      sessionFilter: ["whatsapp"],
+      agentFilter: ["main"],
+    },
+  },
+  browser: {
+    enabled: true,
+    defaultProfile: "openclaw",
+    executablePath: "/usr/bin/chromium",
+    headless: true,
+    noSandbox: true,
+  },
+  canvasHost: {
+    enabled: true,
+    root: `${workspace}/canvas`,
+    liveReload: false,
+  },
+  gateway: {
+    port: Number(env.GATEWAY_PORT || 18789),
+    bind: "lan",
+    controlUi: {
+      enabled: true,
+    },
+    auth: {
+      mode: "token",
+      token: env.OPENCLAW_GATEWAY_TOKEN || "",
+    },
+  },
+  logging: {
+    level: env.OPENCLAW_LOG_LEVEL || "info",
+    consoleLevel: env.OPENCLAW_LOG_LEVEL || "info",
+    consoleStyle: "pretty",
+  },
+};
+
+process.stdout.write(`${JSON.stringify(config, null, 2)}\n`);
+NODE
+
+echo "OpenClaw configuration written to ${CONFIG_FILE}"
+
 exec node dist/index.js gateway --bind lan --port "${GATEWAY_PORT:-18789}" --allow-unconfigured "$@"
