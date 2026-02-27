@@ -83,6 +83,9 @@
     "elevenLabsApiKey": {
       "value": "${ELEVENLABS_API_KEY}"
     },
+    "useOfficialImage": {
+      "value": "${USE_OFFICIAL_IMAGE=false}"
+    },
     "scalePollingIntervalSeconds": {
       "value": "${SCALE_POLLING_INTERVAL_SECONDS=30}"
     },
