@@ -47,7 +47,12 @@ Write-Host "Gateway URL: $OpenClawGatewayUrl" -ForegroundColor Gray
 Write-Host "Health: $isHealthy" -ForegroundColor Gray
 Write-Host ""
 Write-Host "Next steps" -ForegroundColor White
-Write-Host "1. Open the control UI with your gateway token." -ForegroundColor Gray
+if ($ResourceGroup -and $OpenClawAppName) {
+    Write-Host "1. Print tokenized dashboard URL: ./scripts/dashboard-url.ps1 -ResourceGroup $ResourceGroup -AppName $OpenClawAppName" -ForegroundColor Gray
+}
+else {
+    Write-Host "1. Open the control UI with your gateway token." -ForegroundColor Gray
+}
 Write-Host "2. Pair WhatsApp in Channels login (QR flow)." -ForegroundColor Gray
 Write-Host "3. Test a voice note and verify transcription." -ForegroundColor Gray
 if ($ResourceGroup -and $OpenClawAppName) {

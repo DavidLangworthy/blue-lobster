@@ -42,7 +42,11 @@ echo "Gateway URL: ${GATEWAY_URL}"
 echo "Health: ${IS_HEALTHY}"
 echo
 echo "Next steps"
-echo "1. Open the control UI with your gateway token."
+if [ -n "${RESOURCE_GROUP}" ] && [ -n "${APP_NAME}" ]; then
+  echo "1. Print tokenized dashboard URL: ./scripts/dashboard-url.sh -g ${RESOURCE_GROUP} -n ${APP_NAME}"
+else
+  echo "1. Open the control UI with your gateway token."
+fi
 echo "2. Pair WhatsApp in Channels login (QR flow)."
 echo "3. Test a voice note and verify transcription."
 if [ -n "${RESOURCE_GROUP}" ] && [ -n "${APP_NAME}" ]; then

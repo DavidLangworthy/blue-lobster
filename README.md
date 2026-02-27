@@ -60,7 +60,13 @@ GitHub Actions provisions infra, builds the container image in ACR, and deploys 
 
 ### 6. Pair WhatsApp and test
 
-- Open `https://<app-fqdn>/` and authenticate using `OPENCLAW_GATEWAY_TOKEN`
+- Print a tokenized dashboard URL (auto-fills gateway token in the UI):
+
+```bash
+./scripts/dashboard-url.sh -g <resource-group> -n openclaw
+```
+
+- Open the printed URL
 - Start WhatsApp channel login (QR flow)
 - Send a test message and a voice note
 

@@ -87,6 +87,8 @@ On first boot, `src/moltbot/init-workspace.sh` creates:
 - Control UI auth is token-based (`OPENCLAW_GATEWAY_TOKEN`)
 - Optional CIDR restrictions through `ALLOWED_IP_RANGES`
 - Optional internal ingress via `INTERNAL_ONLY=true` (requires matching networking setup)
+- Generate a one-click tokenized dashboard URL:
+  - `./scripts/dashboard-url.sh -g <resource-group> -n openclaw`
 
 ## GitOps and OIDC
 
@@ -114,6 +116,12 @@ OIDC setup instructions:
 - Check logs:
   - `az containerapp logs show --name <app-name> --resource-group <rg> --follow`
 - Verify `OPENCLAW_GATEWAY_TOKEN`, AOAI endpoint/key, and model deployment name.
+
+### Control UI says "gateway token missing"
+
+- Use the helper to print a tokenized URL (includes `#token=...`):
+  - `./scripts/dashboard-url.sh -g <resource-group> -n <app-name>`
+- Open that URL once in each browser profile; the UI stores the token locally.
 
 ### WhatsApp disconnected after restart
 
