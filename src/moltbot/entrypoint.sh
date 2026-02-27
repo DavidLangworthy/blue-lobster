@@ -55,6 +55,9 @@ const fallbackModels = rawFallbackModels.filter((model) => {
   }
   return true;
 });
+if (hasAnthropicKey && fallbackModels.length === 0) {
+  fallbackModels.push((env.OPENCLAW_ANTHROPIC_FALLBACK_MODEL || "anthropic/claude-sonnet-4-6").trim());
+}
 const hasAllowFrom = allowFrom.length > 0;
 const whatsappDmPolicy = (env.WHATSAPP_DM_POLICY || (hasAllowFrom ? "allowlist" : "pairing")).trim();
 const whatsappGroupPolicy = (env.WHATSAPP_GROUP_POLICY || (hasAllowFrom ? "allowlist" : "disabled")).trim();
@@ -133,15 +136,11 @@ const config = {
       "group:fs",
       "group:runtime",
       "group:sessions",
-      "group:memory",
       "group:ui",
-      "group:automation",
       "group:messaging",
       "message",
       "browser",
       "canvas",
-      "cron",
-      "gateway",
       "exec",
       "process",
     ],
@@ -220,15 +219,10 @@ if (azureOpenAiEndpoint) {
     id: azureOpenAiDeployment,
     name: `Azure ${azureOpenAiDeployment}`,
     input: ["text", "image"],
-    compat: {
-      // Azure Responses does not support OpenAI's store=true behavior.
-      supportsStore: false,
-    },
+    // Keep this explicit so reasoning-capable model IDs don't auto-enable
+    // reasoning features on deployments that do not support them.
+    reasoning: azureOpenAiReasoning,
   };
-
-  if (azureOpenAiReasoning) {
-    azureModelConfig.reasoning = true;
-  }
 
   config.models = {
     mode: "merge",
