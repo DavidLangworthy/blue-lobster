@@ -17,8 +17,8 @@ Options:
   --azure-location <location>       GitHub variable AZURE_LOCATION (default: eastus2)
   --existing-acr-name <name>        Optional shared ACR name (sets EXISTING_CONTAINER_REGISTRY_NAME variable)
   --openclaw-gateway-token <token>  OPENCLAW_GATEWAY_TOKEN secret (default: generated)
-  --aoai-endpoint <url>             Optional AZURE_OPENAI_ENDPOINT secret
-  --aoai-key <key>                  Optional AZURE_OPENAI_API_KEY secret
+  --aoai-endpoint <url>             Optional AZURE_OPENAI_ENDPOINT secret override
+  --aoai-key <key>                  Optional AZURE_OPENAI_API_KEY secret override
   --dry-run                         Print planned actions without applying
   -h, --help                        Show help
 
@@ -246,9 +246,10 @@ fi
 echo "Setting GitHub Actions variables"
 set_gh_variable "${REPO}" "AZD_ENV_NAME" "${AZD_ENV_NAME}"
 set_gh_variable "${REPO}" "AZURE_LOCATION" "${AZURE_LOCATION}"
+set_gh_variable "${REPO}" "DEPLOY_AZURE_OPENAI" "true"
+set_gh_variable "${REPO}" "AZURE_OPENAI_SKU_NAME" "S0"
 set_gh_variable "${REPO}" "ENABLE_ALERTS" "false"
 set_gh_variable "${REPO}" "INTERNAL_ONLY" "false"
-set_gh_variable "${REPO}" "OPENCLAW_MODEL_FALLBACKS" "anthropic/claude-sonnet-4-6"
 set_gh_variable "${REPO}" "OPENCLAW_ROOMS" "living-room,master-bedroom"
 set_gh_variable "${REPO}" "OPENCLAW_TTS_PROVIDER" "edge"
 set_gh_variable "${REPO}" "OPENCLAW_TTS_AUTO" "inbound"
@@ -258,6 +259,13 @@ set_gh_variable "${REPO}" "SCALE_COOLDOWN_SECONDS" "3600"
 set_gh_variable "${REPO}" "HEARTBEAT_CRON_START" "0 8-20 * * *"
 set_gh_variable "${REPO}" "HEARTBEAT_CRON_END" "5 8-20 * * *"
 set_gh_variable "${REPO}" "HEARTBEAT_CRON_TIMEZONE" "America/Los_Angeles"
+
+# Cleanup legacy default that forced Anthropic fallback with empty/invalid key.
+if [[ "${DRY_RUN}" == "true" ]]; then
+  echo "+ gh variable delete OPENCLAW_MODEL_FALLBACKS -R ${REPO} (ignore if missing)"
+else
+  gh variable delete OPENCLAW_MODEL_FALLBACKS -R "${REPO}" >/dev/null 2>&1 || true
+fi
 
 if [[ -n "${EXISTING_ACR_NAME}" ]]; then
   set_gh_variable "${REPO}" "EXISTING_CONTAINER_REGISTRY_NAME" "${EXISTING_ACR_NAME}"
@@ -270,6 +278,6 @@ echo "App ID: ${APP_ID}"
 echo "Service Principal: ${SP_OBJECT_ID}"
 echo "Gateway token secret: OPENCLAW_GATEWAY_TOKEN (set)"
 if [[ -z "${AOAI_ENDPOINT}" || -z "${AOAI_KEY}" ]]; then
-  echo "Note: AZURE_OPENAI_ENDPOINT and/or AZURE_OPENAI_API_KEY were not provided."
-  echo "      Set them via script flags or GH secrets before expecting model responses."
+  echo "Note: AOAI endpoint/key secrets were not provided."
+  echo "      Bicep will auto-provision Azure OpenAI and wire endpoint/key on deploy."
 fi

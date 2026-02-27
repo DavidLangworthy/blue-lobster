@@ -11,6 +11,15 @@
     "existingContainerRegistryName": {
       "value": "${EXISTING_CONTAINER_REGISTRY_NAME}"
     },
+    "deployAzureOpenAi": {
+      "value": "${DEPLOY_AZURE_OPENAI=true}"
+    },
+    "azureOpenAiAccountName": {
+      "value": "${AZURE_OPENAI_ACCOUNT_NAME}"
+    },
+    "azureOpenAiSkuName": {
+      "value": "${AZURE_OPENAI_SKU_NAME=S0}"
+    },
     "azureOpenAiEndpoint": {
       "value": "${AZURE_OPENAI_ENDPOINT}"
     },
@@ -33,7 +42,7 @@
       "value": "${OPENCLAW_MODEL}"
     },
     "openclawModelFallbacks": {
-      "value": "${OPENCLAW_MODEL_FALLBACKS=anthropic/claude-sonnet-4-6}"
+      "value": "${OPENCLAW_MODEL_FALLBACKS}"
     },
     "openclawRooms": {
       "value": "${OPENCLAW_ROOMS=living-room,master-bedroom}"

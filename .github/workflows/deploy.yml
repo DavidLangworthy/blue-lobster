@@ -17,11 +17,14 @@ concurrency:
 env:
   AZD_ENV_NAME: ${{ vars.AZD_ENV_NAME || 'openclaw-prod' }}
   AZURE_LOCATION: ${{ vars.AZURE_LOCATION || 'eastus2' }}
+  DEPLOY_AZURE_OPENAI: ${{ vars.DEPLOY_AZURE_OPENAI || 'true' }}
+  AZURE_OPENAI_ACCOUNT_NAME: ${{ vars.AZURE_OPENAI_ACCOUNT_NAME }}
+  AZURE_OPENAI_SKU_NAME: ${{ vars.AZURE_OPENAI_SKU_NAME || 'S0' }}
   AZURE_OPENAI_DEPLOYMENT: ${{ vars.AZURE_OPENAI_DEPLOYMENT || 'gpt-5-2' }}
   OPENCLAW_PERSONA_NAME: ${{ vars.OPENCLAW_PERSONA_NAME || 'Clawd' }}
   OPENCLAW_VERSION: ${{ vars.OPENCLAW_VERSION || 'main' }}
   OPENCLAW_ROOMS: ${{ vars.OPENCLAW_ROOMS || 'living-room,master-bedroom' }}
-  OPENCLAW_MODEL_FALLBACKS: ${{ vars.OPENCLAW_MODEL_FALLBACKS || 'anthropic/claude-sonnet-4-6' }}
+  OPENCLAW_MODEL_FALLBACKS: ${{ vars.OPENCLAW_MODEL_FALLBACKS }}
   EXISTING_CONTAINER_REGISTRY_NAME: ${{ vars.EXISTING_CONTAINER_REGISTRY_NAME }}
   OPENCLAW_TTS_PROVIDER: ${{ vars.OPENCLAW_TTS_PROVIDER || 'edge' }}
   OPENCLAW_TTS_AUTO: ${{ vars.OPENCLAW_TTS_AUTO || 'inbound' }}
@@ -113,6 +116,8 @@ jobs:
           azd env set AZURE_LOCATION "${AZURE_LOCATION}"
           azd env set AZURE_SUBSCRIPTION_ID "${{ secrets.AZURE_SUBSCRIPTION_ID }}"
           azd env set AZURE_TENANT_ID "${{ secrets.AZURE_TENANT_ID }}"
+          azd env set DEPLOY_AZURE_OPENAI "${DEPLOY_AZURE_OPENAI}"
+          azd env set AZURE_OPENAI_SKU_NAME "${AZURE_OPENAI_SKU_NAME}"
           azd env set AZURE_OPENAI_DEPLOYMENT "${AZURE_OPENAI_DEPLOYMENT}"
           azd env set OPENCLAW_PERSONA_NAME "${OPENCLAW_PERSONA_NAME}"
           azd env set OPENCLAW_ROOMS "${OPENCLAW_ROOMS}"
@@ -135,6 +140,7 @@ jobs:
 
           set_if_present AZURE_OPENAI_ENDPOINT "${AZURE_OPENAI_ENDPOINT}"
           set_if_present AZURE_OPENAI_API_KEY "${AZURE_OPENAI_API_KEY}"
+          set_if_present AZURE_OPENAI_ACCOUNT_NAME "${AZURE_OPENAI_ACCOUNT_NAME}"
           set_if_present ANTHROPIC_API_KEY "${ANTHROPIC_API_KEY}"
           set_if_present EXISTING_CONTAINER_REGISTRY_NAME "${EXISTING_CONTAINER_REGISTRY_NAME}"
           set_if_present OPENCLAW_GATEWAY_TOKEN "${OPENCLAW_GATEWAY_TOKEN}"

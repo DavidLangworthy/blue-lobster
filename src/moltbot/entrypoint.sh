@@ -40,7 +40,7 @@ function titleCase(input) {
 const workspace = env.OPENCLAW_WORKSPACE || "/workspace";
 const allowFrom = splitCsv(env.WHATSAPP_ALLOW_FROM);
 const rooms = splitCsv(env.OPENCLAW_ROOMS || "living-room,master-bedroom");
-const fallbackModels = splitCsv(env.OPENCLAW_MODEL_FALLBACKS || "anthropic/claude-sonnet-4-6");
+const fallbackModels = splitCsv(env.OPENCLAW_MODEL_FALLBACKS || "");
 const azureOpenAiEndpoint = (env.AZURE_OPENAI_ENDPOINT || "").trim().replace(/\/+$/, "");
 const azureOpenAiDeployment = (env.AZURE_OPENAI_DEPLOYMENT || "gpt-5-2").trim();
 const explicitModel = (env.OPENCLAW_MODEL || "").trim();

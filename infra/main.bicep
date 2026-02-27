@@ -12,6 +12,15 @@ param location string
 @description('Optional existing Azure Container Registry name to reuse (reduces baseline cost when using multiple environments)')
 param existingContainerRegistryName string = ''
 
+@description('Deploy Azure OpenAI account automatically when endpoint is not provided')
+param deployAzureOpenAi bool = true
+
+@description('Optional explicit Azure OpenAI account name (used when deployAzureOpenAi=true and endpoint is empty)')
+param azureOpenAiAccountName string = ''
+
+@description('Azure OpenAI account SKU')
+param azureOpenAiSkuName string = 'S0'
+
 @description('Azure OpenAI endpoint (for example: https://my-aoai.openai.azure.com)')
 param azureOpenAiEndpoint string = ''
 
@@ -37,7 +46,7 @@ param openclawPersonaName string = 'Clawd'
 param openclawModel string = ''
 
 @description('Comma-separated fallback models (provider/model)')
-param openclawModelFallbacks string = 'anthropic/claude-sonnet-4-6'
+param openclawModelFallbacks string = ''
 
 @description('Comma-separated room slugs used to scaffold persistent canvas rooms')
 param openclawRooms string = 'living-room,master-bedroom'
@@ -139,12 +148,32 @@ var abbrs = loadJsonContent('./abbreviations.json')
 var resourceToken = toLower(uniqueString(subscription().id, environmentName, location))
 var tags = { 'azd-env-name': environmentName }
 var useExistingContainerRegistry = !empty(existingContainerRegistryName)
+var generatedAzureOpenAiName = !empty(azureOpenAiAccountName) ? azureOpenAiAccountName : '${abbrs.cognitiveServicesAccounts}${resourceToken}'
 
 resource rg 'Microsoft.Resources/resourceGroups@2022-09-01' = {
   name: '${abbrs.resourcesResourceGroups}${environmentName}'
   location: location
   tags: tags
 }
+
+module azureOpenAi './modules/azure-openai.bicep' = if (deployAzureOpenAi && empty(azureOpenAiEndpoint)) {
+  name: 'azure-openai'
+  scope: rg
+  params: {
+    name: generatedAzureOpenAiName
+    location: location
+    tags: tags
+    skuName: azureOpenAiSkuName
+  }
+}
+
+resource generatedAzureOpenAiAccount 'Microsoft.CognitiveServices/accounts@2025-06-01' existing = if (deployAzureOpenAi && empty(azureOpenAiEndpoint)) {
+  scope: rg
+  name: generatedAzureOpenAiName
+}
+
+var effectiveAzureOpenAiEndpoint = !empty(azureOpenAiEndpoint) ? azureOpenAiEndpoint : (deployAzureOpenAi && empty(azureOpenAiEndpoint) ? azureOpenAi!.outputs.endpoint : '')
+var effectiveAzureOpenAiApiKey = !empty(azureOpenAiApiKey) ? azureOpenAiApiKey : (deployAzureOpenAi && empty(azureOpenAiEndpoint) ? generatedAzureOpenAiAccount!.listKeys().key1 : '')
 
 module logAnalytics './modules/log-analytics.bicep' = {
   name: 'log-analytics'
@@ -213,8 +242,8 @@ module openclawApp './modules/openclaw-app.bicep' = {
     mediaShareName: storageAccount.outputs.mediaShareName
     imageTag: imageTag
     useOfficialImage: useOfficialImage
-    azureOpenAiEndpoint: azureOpenAiEndpoint
-    azureOpenAiApiKey: azureOpenAiApiKey
+    azureOpenAiEndpoint: effectiveAzureOpenAiEndpoint
+    azureOpenAiApiKey: effectiveAzureOpenAiApiKey
     azureOpenAiDeployment: azureOpenAiDeployment
     anthropicApiKey: anthropicApiKey
     openclawGatewayToken: openclawGatewayToken
@@ -279,6 +308,8 @@ output CONTAINER_REGISTRY_LOGIN_SERVER string = containerRegistryLoginServer
 output OPENCLAW_APP_NAME string = openclawApp.outputs.name
 output OPENCLAW_APP_FQDN string = openclawApp.outputs.fqdn
 output OPENCLAW_GATEWAY_URL string = 'https://${openclawApp.outputs.fqdn}'
+output AZURE_OPENAI_ENDPOINT string = effectiveAzureOpenAiEndpoint
+output AZURE_OPENAI_ACCOUNT_NAME string = generatedAzureOpenAiName
 
 // Backward-compatible output aliases used by existing scripts.
 output CLAWDBOT_APP_NAME string = openclawApp.outputs.name

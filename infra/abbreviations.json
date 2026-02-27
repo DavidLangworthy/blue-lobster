@@ -2,6 +2,7 @@
   "appContainerAppsEnvironments": "cae-",
   "appContainerApps": "ca-",
   "containerRegistryRegistries": "cr",
+  "cognitiveServicesAccounts": "aoai",
   "operationalInsightsWorkspaces": "log-",
   "resourcesResourceGroups": "rg-",
   "storageStorageAccounts": "st",

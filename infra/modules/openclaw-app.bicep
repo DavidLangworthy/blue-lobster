@@ -62,7 +62,7 @@ param openclawPersonaName string = 'Clawd'
 param openclawModel string = ''
 
 @description('Comma-separated fallback models (provider/model)')
-param openclawModelFallbacks string = 'anthropic/claude-sonnet-4-6'
+param openclawModelFallbacks string = ''
 
 @description('Comma-separated room slugs for per-room agent scaffolding')
 param openclawRooms string = 'living-room,master-bedroom'
