@@ -194,6 +194,7 @@ const config = {
     profiles: {
       openclaw: {
         cdpPort: 18800,
+        color: "#FF4500",
       },
     },
   },
