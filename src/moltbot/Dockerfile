@@ -36,7 +36,8 @@ COPY entrypoint.sh /app/entrypoint.sh
 COPY init-workspace.sh /app/init-workspace.sh
 COPY azure-stt.sh /app/azure-stt.sh
 COPY chmod-shim.cjs /app/chmod-shim.cjs
-RUN chmod +x /app/entrypoint.sh /app/init-workspace.sh /app/azure-stt.sh
+COPY start-browser-cdp.sh /app/start-browser-cdp.sh
+RUN chmod +x /app/entrypoint.sh /app/init-workspace.sh /app/azure-stt.sh /app/start-browser-cdp.sh
 
 ENV NODE_ENV=production
 ENV GATEWAY_PORT=18789

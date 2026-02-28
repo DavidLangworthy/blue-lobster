@@ -65,6 +65,8 @@ const controlUiHostHeaderFallback =
   (env.OPENCLAW_CONTROLUI_HOST_HEADER_FALLBACK || "true").trim().toLowerCase() === "true";
 const controlUiDisableDeviceAuth =
   (env.OPENCLAW_CONTROLUI_DISABLE_DEVICE_AUTH || "true").trim().toLowerCase() === "true";
+const browserAttachOnly =
+  (env.OPENCLAW_BROWSER_ATTACH_ONLY || "true").trim().toLowerCase() === "true";
 
 const defaultAllow = hasAllowFrom ? allowFrom : [];
 const primaryModel =
@@ -188,6 +190,12 @@ const config = {
     executablePath: "/usr/bin/chromium",
     headless: true,
     noSandbox: true,
+    attachOnly: browserAttachOnly,
+    profiles: {
+      openclaw: {
+        cdpPort: 18800,
+      },
+    },
   },
   canvasHost: {
     enabled: true,
@@ -255,5 +263,9 @@ if [[ "${OPENCLAW_IGNORE_CHMOD_ERRORS:-true}" == "true" ]]; then
     export NODE_OPTIONS="--require=/app/chmod-shim.cjs"
   fi
 fi
+
+# Start a dedicated local Chromium CDP endpoint when running in attach-only mode.
+# This avoids intermittent on-demand browser launch failures in ACA environments.
+/app/start-browser-cdp.sh
 
 exec node dist/index.js gateway --bind lan --port "${GATEWAY_PORT:-18789}" --allow-unconfigured "$@"
