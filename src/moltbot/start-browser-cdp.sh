@@ -59,3 +59,19 @@ fi
 ) >/dev/null 2>&1 &
 
 disown || true
+
+# Wait for CDP to become ready before returning.
+# Without this the gateway can start accepting requests before Chromium is
+# listening, which causes the first browser tool invocation to fail with
+# "Failed to start Chrome CDP on port ..." or a 15 s timeout.
+CDP_READY_TIMEOUT="${OPENCLAW_BROWSER_CDP_READY_TIMEOUT:-30}"
+WAITED=0
+while [ "$WAITED" -lt "$CDP_READY_TIMEOUT" ]; do
+  if curl -sf "http://127.0.0.1:${CDP_PORT}/json/version" >/dev/null 2>&1; then
+    echo "CDP ready on port ${CDP_PORT}" >&2
+    exit 0
+  fi
+  sleep 1
+  WAITED=$((WAITED + 1))
+done
+echo "WARNING: CDP not ready after ${CDP_READY_TIMEOUT}s on port ${CDP_PORT}" >&2

@@ -128,7 +128,7 @@ param containerCpu string = '1.0'
 param containerMemory string = '2.0Gi'
 
 @description('Minimum number of replicas')
-param minReplicas int = 0
+param minReplicas int = 1
 
 @description('Maximum number of replicas (set to 1 for singleton WhatsApp Web session)')
 param maxReplicas int = 1
@@ -494,18 +494,6 @@ resource containerApp 'Microsoft.App/containerApps@2025-01-01' = {
             http: {
               metadata: {
                 concurrentRequests: '10'
-              }
-            }
-          }
-          {
-            name: 'heartbeat-wake'
-            custom: {
-              type: 'cron'
-              metadata: {
-                timezone: heartbeatCronTimezone
-                start: heartbeatCronStart
-                end: heartbeatCronEnd
-                desiredReplicas: '1'
               }
             }
           }
