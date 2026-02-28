@@ -181,6 +181,7 @@ Expected: app returns healthy, and WhatsApp session reconnects without requiring
 | `WhatsApp login failed: status=515 Unknown Stream Errored (restart required)` | Upstream WhatsApp QR reconnect edge-case in current OpenClaw release | Use this repo's patched image (build-time hotfix in `src/moltbot/patch-whatsapp-515.cjs`), then restart revision and relink |
 | `Web connection closed (status 440: session conflict)` | Competing WhatsApp Web session (another device/session or multi-replica overlap) | Remove stale linked devices, relink, and keep ACA `maxReplicas=1` |
 | `browser failed: Can't reach the OpenClaw browser control service (timed out after 15000ms)` | Browser tool action timeout too short for cold Chromium startup in ACA | Use this repo's patched image (build-time hotfix in `src/moltbot/patch-browser-timeouts.cjs`), then restart revision |
+| `Failed to start Chrome CDP on port 18800 for profile "openclaw"` | On-demand browser launch instability for managed profile in containerized runtime | Use attach-only prestart launcher (`src/moltbot/start-browser-cdp.sh`) and keep `browser.attachOnly=true` |
 
 ## Troubleshooting
 

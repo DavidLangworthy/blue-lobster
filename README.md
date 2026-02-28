@@ -96,6 +96,7 @@ Deploys pin ACA to an immutable image tag (`IMAGE_TAG`, default: commit SHA) ins
 - Anthropic fallback is optional and auto-disabled unless `ANTHROPIC_API_KEY` is set
 - Includes build-time WhatsApp QR `515` pairing hotfix for OpenClaw `v2026.2.26`
 - Includes build-time browser tool timeout hotfix (`src/moltbot/patch-browser-timeouts.cjs`) for slower ACA cold starts
+- Runs Chromium in attach-only CDP mode via `src/moltbot/start-browser-cdp.sh` to avoid sporadic CDP launch failures in ACA
 - Optional Azure Speech STT (`src/moltbot/azure-stt.sh`)
 - Optional ElevenLabs TTS via `ELEVENLABS_API_KEY`
 - Live Canvas over ingress with room paths like:
