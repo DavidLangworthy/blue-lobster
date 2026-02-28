@@ -1,0 +1,34 @@
+# OpenClaw base image: OS deps, OpenClaw source, patches, and compiled build.
+# Rebuilt only when OPENCLAW_VERSION or patch files change (~4 min).
+# Runtime scripts are layered on top in the final Dockerfile (~10 sec).
+
+FROM node:22-bookworm
+
+# Install runtime dependencies (Chromium for browser tool + ffmpeg for media handling).
+RUN apt-get update && apt-get install -y \
+    ca-certificates \
+    curl \
+    ffmpeg \
+    git \
+    chromium \
+    fonts-liberation \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+ARG OPENCLAW_VERSION=v2026.2.26
+RUN git clone --depth 1 --branch ${OPENCLAW_VERSION} https://github.com/openclaw/openclaw.git .
+
+COPY patch-whatsapp-515.cjs /app/patch-whatsapp-515.cjs
+RUN node /app/patch-whatsapp-515.cjs /app/src/web/session.ts
+COPY patch-browser-timeouts.cjs /app/patch-browser-timeouts.cjs
+RUN node /app/patch-browser-timeouts.cjs /app/src/browser/client.ts
+
+RUN corepack enable
+RUN pnpm install --frozen-lockfile
+RUN pnpm build
+RUN pnpm ui:install
+RUN pnpm ui:build
+
+# Persistent directories (mounted via Azure Files in ACA).
+RUN mkdir -p /home/node/.openclaw /workspace /workspace/canvas

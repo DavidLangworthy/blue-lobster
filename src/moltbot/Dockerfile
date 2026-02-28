@@ -1,36 +1,10 @@
-# OpenClaw on Azure Container Apps
-# Builds OpenClaw from source and applies Azure-focused runtime defaults.
+# OpenClaw runtime image.
+# Built on top of the pre-compiled base image for fast iteration (~10 sec).
+# The base image (Dockerfile.base) contains OS deps, OpenClaw source, and the
+# full pnpm build.  It is rebuilt only when OPENCLAW_VERSION or patches change.
 
-FROM node:22-bookworm
-
-# Install runtime dependencies (Chromium for browser tool + ffmpeg for media handling).
-RUN apt-get update && apt-get install -y \
-    ca-certificates \
-    curl \
-    ffmpeg \
-    git \
-    chromium \
-    fonts-liberation \
-    && rm -rf /var/lib/apt/lists/*
-
-WORKDIR /app
-
-ARG OPENCLAW_VERSION=v2026.2.26
-RUN git clone --depth 1 --branch ${OPENCLAW_VERSION} https://github.com/openclaw/openclaw.git .
-
-COPY patch-whatsapp-515.cjs /app/patch-whatsapp-515.cjs
-RUN node /app/patch-whatsapp-515.cjs /app/src/web/session.ts
-COPY patch-browser-timeouts.cjs /app/patch-browser-timeouts.cjs
-RUN node /app/patch-browser-timeouts.cjs /app/src/browser/client.ts
-
-RUN corepack enable
-RUN pnpm install --frozen-lockfile
-RUN pnpm build
-RUN pnpm ui:install
-RUN pnpm ui:build
-
-# Persistent directories (mounted via Azure Files in ACA).
-RUN mkdir -p /home/node/.openclaw /workspace /workspace/canvas
+ARG BASE_IMAGE
+FROM ${BASE_IMAGE}
 
 COPY entrypoint.sh /app/entrypoint.sh
 COPY init-workspace.sh /app/init-workspace.sh
