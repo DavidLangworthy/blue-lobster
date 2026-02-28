@@ -130,8 +130,8 @@ param containerMemory string = '2.0Gi'
 @description('Minimum number of replicas')
 param minReplicas int = 0
 
-@description('Maximum number of replicas')
-param maxReplicas int = 2
+@description('Maximum number of replicas (set to 1 for singleton WhatsApp Web session)')
+param maxReplicas int = 1
 
 @description('Scale polling interval in seconds')
 param scalePollingIntervalSeconds int = 30
