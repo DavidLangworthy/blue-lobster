@@ -179,6 +179,7 @@ Expected: app returns healthy, and WhatsApp session reconnects without requiring
 | `HTTP 401 invalid x-api-key` for Anthropic | Optional fallback enabled without valid Anthropic key | Leave `OPENCLAW_MODEL_FALLBACKS` empty unless Anthropic is configured |
 | Dashboard connected but no model replies | Gateway auth is fine, model provider auth is not | Check `AZURE_OPENAI_ENDPOINT`, `AZURE_OPENAI_API_KEY`, and deployment name |
 | `WhatsApp login failed: status=515 Unknown Stream Errored (restart required)` | Upstream WhatsApp QR reconnect edge-case in current OpenClaw release | Use this repo's patched image (build-time hotfix in `src/moltbot/patch-whatsapp-515.cjs`), then restart revision and relink |
+| `browser failed: Can't reach the OpenClaw browser control service (timed out after 15000ms)` | Browser tool action timeout too short for cold Chromium startup in ACA | Use this repo's patched image (build-time hotfix in `src/moltbot/patch-browser-timeouts.cjs`), then restart revision |
 
 ## Troubleshooting
 
