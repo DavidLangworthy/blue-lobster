@@ -20,6 +20,8 @@ RUN git clone --depth 1 --branch ${OPENCLAW_VERSION} https://github.com/openclaw
 
 COPY patch-whatsapp-515.cjs /app/patch-whatsapp-515.cjs
 RUN node /app/patch-whatsapp-515.cjs /app/src/web/session.ts
+COPY patch-browser-timeouts.cjs /app/patch-browser-timeouts.cjs
+RUN node /app/patch-browser-timeouts.cjs /app/src/browser/client.ts
 
 RUN corepack enable
 RUN pnpm install --frozen-lockfile
